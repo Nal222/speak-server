@@ -5,18 +5,21 @@
 var
     express = require('express'),
     cors = require('cors'),
-    app = express()
+    app = express(),
+    bodyParser = require('body-parser')
 ;
 
 app.use(cors());
+app.use(bodyParser.json());
 
 console.log("hello");
 
 app.post(
     '/login',
-    function (req, res) {
-        console.log('YES!!!!!!! APP.POST REACHED')
-        res.send('POST request to the login page');
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        response.json({name: "Nalini"});
     }
 );
 
