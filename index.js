@@ -26,28 +26,32 @@ app.post(
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
         response.json({name: "Nalini"});
-        MongoClient.connect('mongodb://localhost/Users', function (err, db) {
-            if (err) {
-                return console.dir(err);
-
-            }
-            var collection = db.collection('speakappuser');
-            collection.insertMany(request.body, {w:1}, function(err, result) {});
-            collection.find({title: 'great'}).toArray(function(err, result)
-            {
+        MongoClient.connect(
+            'mongodb://localhost/Users',
+            function (err, db) {
                 if (err) {
-                    console.log(err);
-                } else if (result.length) {
-                    console.log('Found: ', result);
-                } else {
-                    console.log('No document(s) found with defined "find" criteria');
+                    return console.dir(err);
+
                 }
-
-
-                db.close();
-            });
-        });
-
+                var collection = db.collection('speakappuser');
+                collection.insertOne(request.body);
+                collection
+                    .find()
+                    .toArray(
+                        function(err, result){
+                            if (err) {
+                                console.log(err);
+                            } else if (result.length) {
+                                console.log('Found: ', result);
+                            } else {
+                                console.log('No document(s) found with defined "find" criteria');
+                            }
+                            db.close();
+                        }
+                    )
+                ;
+            }
+        );
     });
 
 app.listen(5000);
