@@ -18,6 +18,9 @@ app.use(bodyParser.urlencoded({
 }));
 
 console.log("hello");
+process.on('uncaughtException', function (err) {
+    console.log("There has been an error: " + err);
+});
 
 //var db;
 app.post(
@@ -27,7 +30,7 @@ app.post(
         console.log("REQUEST PATH IS " + request.path);
         response.json({name: "Nalini"});
         MongoClient.connect(
-            'mongodb://localhost/Users',
+            'mongodb://192.168.1.246/Users',
             function (err, db) {
                 if (err) {
                     return console.dir(err);
