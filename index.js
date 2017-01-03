@@ -30,14 +30,12 @@ app.post(
         console.log("REQUEST PATH IS " + request.path);
         response.json({name: "Nalini"});
         MongoClient.connect(
-            'mongodb://192.168.1.246/Users',
-            function (err, database) {
+            'mongodb://192.168.1.248/Users',
+            function (err, db) {
                 if (err) {
                     return console.dir(err);
-
                 }
-                global.db = database;
-                global.collection = database.collection('speakappuser');
+                var collection = db.collection('speakappuser');
                 collection.insertOne(
                     request.body,
                     function (err, result) {
@@ -52,6 +50,7 @@ app.post(
                                     } else {
                                         console.log('No document(s) found with defined "find" criteria');
                                     }
+                                    db.close();
 
                                 }
                             )
@@ -68,30 +67,37 @@ app.post(
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
         response.json({name: "Nalini Chawla"});
-        db.collection.insertOne(
-            request.body,
-            function (err, result) {
-                collection
-                    .find()
-                    .toArray(
-                        function(err, result){
-                            if (err) {
-                                console.log(err);
-                            } else if (result.length) {
-                                console.log('Found: ', result);
-                            } else {
-                                console.log('No document(s) found with defined "find" criteria');
-                            }
-                            db.close();
-                        }
-                    )
-                ;
+        MongoClient.connect(
+            'mongodb://192.168.1.248/Users',
+            function (err, db) {
+                if (err) {
+                    return console.dir(err);
+                }
+                var collection = db.collection('speakappuser');
+                collection.insertOne(
+                    request.body,
+                    function (err, result) {
+                        collection
+                            .find()
+                            .toArray(
+                                function (err, result) {
+                                    if (err) {
+                                        console.log(err);
+                                    } else if (result.length) {
+                                        console.log('Found: ', result);
+                                    } else {
+                                        console.log('No document(s) found with defined "find" criteria');
+                                    }
+                                    db.close();
+                                }
+                            )
+                        ;
+                    }
+                );
             }
         );
     }
 );
-
-
 
 
 
