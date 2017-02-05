@@ -30,7 +30,7 @@ app.post(
         console.log("REQUEST PATH IS " + request.path);
         response.json({name: "Nalini"});
         MongoClient.connect(
-            'mongodb://192.168.1.248/Users',
+            'mongodb://192.168.1.48/Users',
             function (err, db) {
                 if (err) {
                     return console.dir(err);
@@ -68,7 +68,7 @@ app.post(
         console.log("REQUEST PATH IS " + request.path);
         response.json({name: "Nalini Chawla"});
         MongoClient.connect(
-            'mongodb://192.168.1.248/Users',
+            'mongodb://192.168.1.48/Users',
             function (err, db) {
                 if (err) {
                     return console.dir(err);
