@@ -7,7 +7,9 @@ var
     cors = require('cors'),
     app = express(),
     bodyParser = require('body-parser'),
-    MongoClient = require('mongodb').MongoClient
+    MongoClient = require('mongodb').MongoClient,
+    co = require('co'),
+    assert = require('assert')
 ;
 
 app.use(cors());
@@ -28,7 +30,33 @@ app.post(
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
-        response.json({name: "Nalini"});
+        //response.json({name: "Nalini"});
+        co(function*(){
+            var db = yield MongoClient.connect('mongodb://192.168.1.48/Users');
+            console.log("Connected correctly to server");
+            var r = yield db.collection('speakappuser').insertOne(request.body);
+            assert.equal(1, r.insertedCount);
+            db.collection('speakappuser').find({ username : request.body.username }).limit(2).each(function (err, doc) {
+                if(doc){
+                    response.write("Username exists in database");
+                    return false;
+                }
+            });
+            db.collection('speakappuser').find({ password : request.body.password}).limit(2).each(function (err, doc) {
+                if(doc){
+                    response.write("Password exists in database");
+                    response.end();
+                    return false;
+                }
+            });
+            db.close();
+        }).catch(function(err){
+            console.log(err.stack);
+         });
+
+    }
+);
+    /*
         MongoClient.connect(
             'mongodb://192.168.1.48/Users',
             function (err, db) {
@@ -61,6 +89,7 @@ app.post(
         );
     }
 );
+*/
 app.post(
     '/chooseImagesAndImageOrder',
     function (request, response) {
