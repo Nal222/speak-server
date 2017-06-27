@@ -9,7 +9,13 @@ var
     bodyParser = require('body-parser'),
     MongoClient = require('mongodb').MongoClient,
     co = require('co'),
-    assert = require('assert')
+    assert = require('assert'),
+    usersUrl = 'mongodb://127.0.0.1:27017/Users',
+    BinaryServer = require('binaryjs').BinaryServer,
+    fs = require('fs'),
+    wav = require('wav'),
+    port = 3700,
+    outFile = 'demo.wav'
 ;
 
 app.use(cors());
@@ -32,13 +38,14 @@ app.post(
                 console.log("REQUEST BODY IS " + JSON.stringify(request.body));
                 console.log("REQUEST PATH IS " + request.path);
                 //response.json({name: "Nalini"});
-                var db = yield MongoClient.connect('mongodb://192.168.1.48/Users');
+                var db = yield MongoClient.connect(usersUrl);
                 console.log("Connected correctly to server");
                 /*response.setHeader('Content-Type', 'text/html; charset=UTF-8');
                 response.setHeader('Transfer-Encoding', 'chunked');*/
+                var userName = request.body.username;
                 var
                     speakAppUserCollection = db.collection('speakappuser'),
-                    myDocument = yield speakAppUserCollection.findOne({username: request.body.username})
+                    myDocument = yield speakAppUserCollection.findOne({username: userName})
                 ;
                 console.log("myDocument " + JSON.stringify(myDocument));
                 if (myDocument) {
@@ -129,7 +136,7 @@ app.post(
         console.log("REQUEST PATH IS " + request.path);
         response.json({name: "Nalini Chawla"});
         MongoClient.connect(
-            'mongodb://192.168.1.48/Users',
+            usersUrl,
             function (err, db) {
                 if (err) {
                     return console.dir(err);
@@ -159,11 +166,44 @@ app.post(
         );
     }
 );
-
-
-
-
-
+app.set('views', __dirname + '/tpl');
+app.use(express.static(__dirname + '/public'));
+app.listen(port);
 app.listen(5000);
 app.listen(27017);
+/*app.get('/', function(req, res){
+    res.render('index');
+});
+*/
+
+console.log('server open on ports 27017, 5000 and 3700');
+
+
+binaryServer = BinaryServer({port: 9001});
+
+binaryServer.on('connection', function(client) {
+    console.log('new connection');
+
+    var fileWriter = new wav.FileWriter(outFile, {
+        channels: 1,
+        sampleRate: 48000,
+        bitDepth: 16
+    });
+
+    client.on('stream', function(stream, meta) {
+        console.log('new stream');
+        stream.pipe(fileWriter);
+
+        stream.on('end', function() {
+            fileWriter.end();
+            console.log('wrote to file ' + outFile);
+        });
+    });
+});
+
+
+
+
+
+
 

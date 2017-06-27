@@ -17,10 +17,12 @@
   "author": "Nalini Chawla",
   "license": "ISC",
   "dependencies": {
+    "binaryjs": "latest",
     "body-parser": "^1.15.0",
     "co": "^4.6.0",
     "cors": "^2.7.1",
     "express": "^4.13.4",
-    "mongodb": "^2.1.19"
+    "mongodb": "^2.1.19",
+    "wav": "latest"
   }
 }
