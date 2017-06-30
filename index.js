@@ -14,8 +14,7 @@ var
     BinaryServer = require('binaryjs').BinaryServer,
     fs = require('fs'),
     wav = require('wav'),
-    port = 3700,
-    outFile = 'demo.wav'
+    outFile = 'public/audio/demo.wav'
 ;
 
 app.use(cors());
@@ -168,7 +167,7 @@ app.post(
 );
 app.set('views', __dirname + '/tpl');
 app.use(express.static(__dirname + '/public'));
-app.listen(port);
+app.listen(3700);
 app.listen(5000);
 app.listen(27017);
 /*app.get('/', function(req, res){
