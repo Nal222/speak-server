@@ -13,8 +13,7 @@ var
     usersUrl = 'mongodb://127.0.0.1:27017/Users',
     BinaryServer = require('binaryjs').BinaryServer,
     fs = require('fs'),
-    wav = require('wav'),
-    outFile = 'public/audio/demo.wav'
+    wav = require('wav')
 ;
 
 app.use(cors());
@@ -128,6 +127,7 @@ app.post(
     }
 );
 */
+
 app.post(
     '/chooseImagesAndImageOrder',
     function (request, response) {
@@ -165,6 +165,56 @@ app.post(
         );
     }
 );
+var
+    audioFileId,
+    outFile
+;
+app.post(
+    '/Narrations',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        MongoClient.connect(
+            usersUrl,
+            function (err, db) {
+                if (err) {
+                    return console.dir(err);
+                }
+                var collection = db.collection('speakappuser');
+                collection.insertOne(
+                    request.body,
+                    function (err, result) {
+                        //console.log("earlier attempt at getting saved object id which is " + result._id);
+                        //collection.find(result._id);
+                            //var objectidofnarrationobjectString = (collection.find(result._id)).toString();
+                            //var objectidofnarrationobjectHex = (collection.find(result._id)).toHexString();
+
+                            console.log("objectid of narration object is string " + result.insertedId + ", error is " + err + ", request.body is " + JSON.stringify(request.body));
+                            //audioFileId = result.insertedId;
+                            response.send(result.insertedId + "");
+                           /*.toArray(
+                                function (err, result) {
+                                    if (err) {
+                                        console.log(err);
+                                    } else if (result.length) {
+                                        console.log('Found: ', result);
+                                        var objectidofslideshow = result._id;
+                                        console.log("object id of slideshow object is " + objectidofslideshow);
+                                    } else {
+                                        console.log('No document(s) found with defined "find" criteria');
+                                    }
+                                    db.close();
+                                }
+                            )
+                        ;*/
+                    }
+                );
+            }
+        );
+    }
+);
+
 app.set('views', __dirname + '/tpl');
 app.use(express.static(__dirname + '/public'));
 app.listen(3700);
@@ -180,25 +230,49 @@ console.log('server open on ports 27017, 5000 and 3700');
 
 binaryServer = BinaryServer({port: 9001});
 
-binaryServer.on('connection', function(client) {
-    console.log('new connection');
+binaryServer.on(
+    'connection',
+    function(client) {
+        console.log('new connection');
+        outFile = "public/audio/" + audioFileId + '.wav';
+        console.log("outfile is " + outFile);
 
-    var fileWriter = new wav.FileWriter(outFile, {
-        channels: 1,
-        sampleRate: 48000,
-        bitDepth: 16
-    });
+        /*
+            TODO:
 
-    client.on('stream', function(stream, meta) {
-        console.log('new stream');
-        stream.pipe(fileWriter);
+            Maybe generate
+        */
 
-        stream.on('end', function() {
-            fileWriter.end();
-            console.log('wrote to file ' + outFile);
-        });
-    });
-});
+
+
+        client.on(
+            'stream',
+            function(stream, meta) {
+                console.log('new stream. meta is ' + meta);
+                var fileWriter =
+                    new wav.FileWriter(
+                        "public/audio/" + meta + ".wav"
+                        ,
+                        {
+                            channels: 1,
+                            sampleRate: 48000,
+                            bitDepth: 16
+                        }
+                    )
+                ;
+                stream.pipe(fileWriter);
+
+                stream.on(
+                    'end',
+                    function() {
+                        fileWriter.end();
+                        console.log('wrote to file ' + meta + ".wav");
+                    }
+                );
+            }
+        );
+    }
+);
 
 
 
