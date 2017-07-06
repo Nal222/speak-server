@@ -165,10 +165,6 @@ app.post(
         );
     }
 );
-var
-    audioFileId,
-    outFile
-;
 app.post(
     '/Narrations',
     function (request, response) {
@@ -234,17 +230,8 @@ binaryServer.on(
     'connection',
     function(client) {
         console.log('new connection');
-        outFile = "public/audio/" + audioFileId + '.wav';
-        console.log("outfile is " + outFile);
-
-        /*
-            TODO:
-
-            Maybe generate
-        */
-
-
-
+        /*outFile = "public/audio/" + audioFileId + '.wav';
+        console.log("outfile is " + outFile);*/
         client.on(
             'stream',
             function(stream, meta) {
