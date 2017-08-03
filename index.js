@@ -13,7 +13,8 @@ var
     usersUrl = 'mongodb://127.0.0.1:27017/Users',
     BinaryServer = require('binaryjs').BinaryServer,
     fs = require('fs'),
-    wav = require('wav')
+    wav = require('wav'),
+    ObjectID = require('mongodb').ObjectID
 ;
 
 app.use(cors());
@@ -171,16 +172,22 @@ app.post(
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
         //response.json({name: "Nalini Chawla"});
+
         MongoClient.connect(
             usersUrl,
             function (err, db) {
+                console.log('1');
                 if (err) {
+                    console.log('2');
                     return console.dir(err);
                 }
-                var collection = db.collection('speakappuser');
+                console.log('3');
+                var collection = db.collection('Narrations');
+                console.log('3a');
                 collection.insertOne(
-                    request.body,
+                    request.body.narration,
                     function (err, result) {
+                        console.log('4');
                         //console.log("earlier attempt at getting saved object id which is " + result._id);
                         //collection.find(result._id);
                             //var objectidofnarrationobjectString = (collection.find(result._id)).toString();
@@ -189,23 +196,66 @@ app.post(
                             console.log("objectid of narration object is string " + result.insertedId + ", error is " + err + ", request.body is " + JSON.stringify(request.body));
                             //audioFileId = result.insertedId;
                             response.send(result.insertedId + "");
-                           /*.toArray(
-                                function (err, result) {
-                                    if (err) {
-                                        console.log(err);
-                                    } else if (result.length) {
-                                        console.log('Found: ', result);
-                                        var objectidofslideshow = result._id;
-                                        console.log("object id of slideshow object is " + objectidofslideshow);
-                                    } else {
-                                        console.log('No document(s) found with defined "find" criteria');
-                                    }
-                                    db.close();
+                            co(
+                                function*() {
+                                    var
+                                        speakAppUserCollection = db.collection('speakappuser'),
+                                        user = yield speakAppUserCollection.findOne(
+                                            {
+                                                username: request.body.username,
+                                                password: request.body.password
+
+                                            }
+                                        )
+                                        ;
+                                    console.log("user is " + user);
+                                    user.narrationIds = user.narrationIds || [];
+                                    user.narrationIds.push(result.insertedId);
+                                    speakAppUserCollection.save(user);
                                 }
-                            )
-                        ;*/
+                            );
+
                     }
                 );
+            }
+        );
+    }
+);
+
+app.post(
+    '/saveSlideSwitches',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        MongoClient.connect(
+            usersUrl,
+            function (err, db) {
+                if (err) {
+                    return console.dir(err);
+                }
+                        co(
+                            function*() {
+                                var
+                                    speakAppNarrationCollection = db.collection('Narrations'),
+                                    narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId = yield speakAppNarrationCollection.findOne(
+                                        {
+                                            _id: new ObjectID(request.body.narrationId)
+                                        }
+                                    )
+                                ;
+                                console.log("narration object matching to audiofileId from client side is " + narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
+                                narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches = request.body.slideSwitches;
+                                /*
+                                narration.slideSwitches = narration.slideSwitches || [];
+                                narration.slideSwitches.push(request.body.slideSwitches);
+                                */
+                                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
+                                console.log("narration object after saving slidewitches is " + narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
+
+                            }
+                        );
+
             }
         );
     }
