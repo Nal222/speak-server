@@ -30,7 +30,7 @@ process.on('uncaughtException', function (err) {
 });
 //var db;
 app.post(
-    '/login',
+    '/register',
     function (request, response) {
         co(
             function*() {
@@ -142,6 +142,9 @@ app.post(
                     return console.dir(err);
                 }
                 var collection = db.collection('speakappuser');
+
+
+
                 collection.insertOne(
                     request.body,
                     function (err, result) {
@@ -234,27 +237,89 @@ app.post(
                 if (err) {
                     return console.dir(err);
                 }
-                        co(
-                            function*() {
-                                var
-                                    speakAppNarrationCollection = db.collection('Narrations'),
-                                    narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId = yield speakAppNarrationCollection.findOne(
-                                        {
-                                            _id: new ObjectID(request.body.narrationId)
-                                        }
-                                    )
-                                ;
-                                console.log("narration object matching to audiofileId from client side is " + narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
-                                narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches = request.body.slideSwitches;
-                                /*
-                                narration.slideSwitches = narration.slideSwitches || [];
-                                narration.slideSwitches.push(request.body.slideSwitches);
-                                */
-                                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
-                                console.log("narration object after saving slidewitches is " + narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
+                co(
+                    function*() {
+                        var
+                            speakAppNarrationCollection = db.collection('Narrations'),
+                            narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId = yield speakAppNarrationCollection.findOne(
+                                {
+                                    _id: new ObjectID(request.body.narrationId)
+                                }
+                            )
+                            ;
+                        console.log("narration object matching to audiofileId from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId));
+                        narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches = request.body.slideSwitches;
+                        /*
+                         narration.slideSwitches = narration.slideSwitches || [];
+                         narration.slideSwitches.push(request.body.slideSwitches);
+                         */
+                        speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
+                        console.log("narration object after saving slideSwitches is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId));
+                        response.send(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches);
 
+                    }
+                );
+
+            }
+        );
+    }
+);
+
+app.post(
+    '/login',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        MongoClient.connect(
+            usersUrl,
+            function (err, db) {
+                if (err) {
+                    return console.dir(err);
+                }
+                co(
+                    function*() {
+                        var
+                            narrations = [],
+                            speakAppNarrationCollection = db.collection('Narrations'),
+                            speakAppUserCollection = db.collection('speakappuser'),
+                            userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = yield speakAppUserCollection.findOne(
+                                {
+                                    username: request.body.username,
+                                    password: request.body.password
+                                }
+                            )
+                        ;
+
+                        for(const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds){
+                            narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
+                                {
+                                    _id: new ObjectID(value)
+                                }
+                            );
+                            narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+                            narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+                        }
+
+                        /*
+                        userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds.forEach(
+                            value=>{
+                                narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
+                                    {
+                                        _id: new ObjectID(value)
+                                    }
+                                );
+                                narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
                             }
                         );
+                        */
+                        userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrations = narrations;
+
+                        response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
+                        console.log("narration object array is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
+
+                    }
+                );
 
             }
         );
