@@ -29,6 +29,8 @@ process.on('uncaughtException', function (err) {
     console.log("There has been an error: " + err);
 });
 //var db;
+
+
 app.post(
     '/register',
     function (request, response) {
@@ -39,8 +41,6 @@ app.post(
                 //response.json({name: "Nalini"});
                 var db = yield MongoClient.connect(usersUrl);
                 console.log("Connected correctly to server");
-                /*response.setHeader('Content-Type', 'text/html; charset=UTF-8');
-                response.setHeader('Transfer-Encoding', 'chunked');*/
                 var userName = request.body.username;
                 var
                     speakAppUserCollection = db.collection('speakappuser'),
@@ -68,11 +68,7 @@ app.post(
                     passwordTaken = false;
                 }
                 console.log("username taken status " + usernameTaken + "password taken status " + passwordTaken);
-                /*var buf = ""
-                for (var i = 0; i < 1000; i++) {
-                    buf += " "
-                }
-                response.write(buf);*/
+
                 if(usernameTaken == true){
                     console.log("reached inside usernameTaken == true")
                     response.write("Username exists in database");
@@ -94,40 +90,6 @@ app.post(
     }
 );
 
-    /*
-        MongoClient.connect(
-            'mongodb://192.168.1.48/Users',
-            function (err, db) {
-                if (err) {
-                    return console.dir(err);
-                }
-                var collection = db.collection('speakappuser');
-                collection.insertOne(
-                    request.body,
-                    function (err, result) {
-                        collection
-                            .find()
-                            .toArray(
-                                function(err, result){
-                                    if (err) {
-                                        console.log(err);
-                                    } else if (result.length) {
-                                        console.log('Found: ', result);
-                                    } else {
-                                        console.log('No document(s) found with defined "find" criteria');
-                                    }
-                                    db.close();
-
-                                }
-                            )
-                        ;
-                    }
-                );
-            }
-        );
-    }
-);
-*/
 
 app.post(
     '/chooseImagesAndImageOrder',
@@ -169,6 +131,66 @@ app.post(
         );
     }
 );
+
+app.post(
+    '/addImage',
+    function (request, response) {
+
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+
+        MongoClient.connect(
+            usersUrl,
+            function (err, db) {
+                console.log('1');
+                if (err) {
+                    console.log('2');
+                    return console.dir(err);
+                }
+                console.log('3');
+                var collection = db.collection('GalleryItems');
+                console.log('3a');
+                collection.insertOne(
+                    {url: request.body.url},
+                    function (err, result) {
+                        console.log('4');
+                        //console.log("earlier attempt at getting saved object id which is " + result._id);
+                        //collection.find(result._id);
+                        //var objectidofnarrationobjectString = (collection.find(result._id)).toString();
+                        //var objectidofnarrationobjectHex = (collection.find(result._id)).toHexString();
+
+                        console.log("objectid of gallery item  object is string " + result.insertedId + ", error is " + err + ", request.body is " + JSON.stringify(request.body));
+                        //audioFileId = result.insertedId;
+                        //response.send(result.insertedId + "");
+                        co(
+                            function*() {
+                                var
+                                    speakAppUserCollection = db.collection('speakappuser'),
+                                    user = yield speakAppUserCollection.findOne(
+                                        {
+                                            username: request.body.username,
+                                            password: request.body.password
+
+                                        }
+                                    )
+                                    ;
+                                console.log("user is " + user);
+                                user.galleryItemIds = user.galleryItemIds || [];
+                                user.galleryItemIds.push(result.insertedId);
+                                speakAppUserCollection.save(user);
+                            }
+                        );
+
+                    }
+                );
+            }
+        );
+
+        response.send({answer:'Hello!'});
+    }
+);
+
 app.post(
     '/Narrations',
     function (request, response) {
@@ -198,7 +220,7 @@ app.post(
 
                             console.log("objectid of narration object is string " + result.insertedId + ", error is " + err + ", request.body is " + JSON.stringify(request.body));
                             //audioFileId = result.insertedId;
-                            response.send(result.insertedId + "");
+                            //response.send(result.insertedId + "");
                             co(
                                 function*() {
                                     var
@@ -225,6 +247,7 @@ app.post(
     }
 );
 
+
 app.post(
     '/saveSlideSwitches',
     function (request, response) {
@@ -249,10 +272,10 @@ app.post(
                             ;
                         console.log("narration object matching to audiofileId from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId));
                         narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches = request.body.slideSwitches;
-                        /*
-                         narration.slideSwitches = narration.slideSwitches || [];
-                         narration.slideSwitches.push(request.body.slideSwitches);
-                         */
+
+                         //narration.slideSwitches = narration.slideSwitches || [];
+                         //narration.slideSwitches.push(request.body.slideSwitches);
+
                         speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
                         console.log("narration object after saving slideSwitches is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId));
                         response.send(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches);
@@ -281,7 +304,9 @@ app.post(
                     function*() {
                         var
                             narrations = [],
+                            galleryItems = [],
                             speakAppNarrationCollection = db.collection('Narrations'),
+                            speakAppGalleryItemCollection = db.collection('GalleryItems');
                             speakAppUserCollection = db.collection('speakappuser'),
                             userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = yield speakAppUserCollection.findOne(
                                 {
@@ -300,23 +325,36 @@ app.post(
                             narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
                             narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
                         }
+                        for(const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds){
+                            galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = yield speakAppGalleryItemCollection.findOne(
+                                {
+                                    _id: new ObjectID(value)
+                                }
+                            );
+                            //galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+                            galleryItems.push(galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds);
+                        }
 
-                        /*
-                        userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds.forEach(
-                            value=>{
-                                narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
-                                    {
-                                        _id: new ObjectID(value)
-                                    }
-                                );
-                                narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
-                            }
-                        );
-                        */
+
+                        //Yield doesn't work inside nested non generator function, even arrow function
+
+                        //userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds.forEach(
+                        //    value=>{
+                        //        narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
+                         //           {
+                        //                _id: new ObjectID(value)
+                         //           }
+                           //     );
+                         //       narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+                        //    }
+                        //);
+
                         userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrations = narrations;
+                        userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItems = galleryItems;
 
                         response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
                         console.log("narration object array is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
+
 
                     }
                 );
@@ -328,13 +366,13 @@ app.post(
 
 app.set('views', __dirname + '/tpl');
 app.use(express.static(__dirname + '/public'));
-app.listen(3700);
+//app.listen(3700);
 app.listen(5000);
-app.listen(27017);
-/*app.get('/', function(req, res){
-    res.render('index');
-});
-*/
+//app.listen(27017);
+//app.get('/', function(req, res){
+//    res.render('index');
+//});
+
 
 console.log('server open on ports 27017, 5000 and 3700');
 
@@ -345,8 +383,8 @@ binaryServer.on(
     'connection',
     function(client) {
         console.log('new connection');
-        /*outFile = "public/audio/" + audioFileId + '.wav';
-        console.log("outfile is " + outFile);*/
+        //outFile = "public/audio/" + audioFileId + '.wav';
+        //console.log("outfile is " + outFile);
         client.on(
             'stream',
             function(stream, meta) {
@@ -375,8 +413,6 @@ binaryServer.on(
         );
     }
 );
-
-
 
 
 
