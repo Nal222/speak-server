@@ -96,35 +96,32 @@ app.post(
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
-        response.json({name: "Nalini Chawla"});
+        //response.json({name: "Nalini Chawla"});
         MongoClient.connect(
             usersUrl,
             function (err, db) {
                 if (err) {
                     return console.dir(err);
                 }
-                var collection = db.collection('speakappuser');
+                co(
+                    function*() {
+                        var
+                            speakAppUserCollection = db.collection('speakappuser'),
+                            user = yield speakAppUserCollection.findOne(
+                                {
+                                    username: request.body.username,
+                                    password: request.body.password
 
-
-
-                collection.insertOne(
-                    request.body,
-                    function (err, result) {
-                        collection
-                            .find()
-                            .toArray(
-                                function (err, result) {
-                                    if (err) {
-                                        console.log(err);
-                                    } else if (result.length) {
-                                        console.log('Found: ', result);
-                                    } else {
-                                        console.log('No document(s) found with defined "find" criteria');
-                                    }
-                                    db.close();
                                 }
                             )
-                        ;
+                            ;
+                        //console.log("user before changing order is " + JSON.stringify(user));
+                        user.galleryItemIds = request.body.galleryItemIds;
+                        //console.log("USER FROM DOING STOP SORTING IS " + JSON.stringify(user));
+                        console.log("Gallery Item Ids after sorting from request is " + request.body.galleryItemIds + "");
+                        speakAppUserCollection.save(user);
+                        //response.send(galleryItemIds);
+                        response.send(user.galleryItemIds);
                     }
                 );
             }
@@ -179,6 +176,7 @@ app.post(
                                 user.galleryItemIds = user.galleryItemIds || [];
                                 user.galleryItemIds.push(result.insertedId);
                                 speakAppUserCollection.save(user);
+                                response.send({galleryItemId: result.insertedId});
                             }
                         );
 
@@ -186,8 +184,6 @@ app.post(
                 );
             }
         );
-
-        response.send({answer:'Hello!'});
     }
 );
 
@@ -315,24 +311,40 @@ app.post(
                                 }
                             )
                         ;
-
+                        //new ObjectID(value)
                         for(const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds){
-                            narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
-                                {
-                                    _id: new ObjectID(value)
-                                }
-                            );
-                            narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
-                            narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+                            try{
+                                console.log("finding narration with id " + value);
+                                narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
+                                    {
+                                        _id: new ObjectID(value)
+                                    }
+                                );
+                                narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+                                narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+
+                            }
+                            catch(e){
+                                console.log("error finding narration with id " + value);
+                            }
+
                         }
                         for(const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds){
-                            galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = yield speakAppGalleryItemCollection.findOne(
-                                {
-                                    _id: new ObjectID(value)
-                                }
-                            );
-                            //galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
-                            galleryItems.push(galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds);
+                            try{
+                                console.log("finding gallery item with id " + value);
+                                galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = yield speakAppGalleryItemCollection.findOne(
+                                    {
+                                        _id: new ObjectID(value)
+                                    }
+                                );
+                                //galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+                                galleryItems.push(galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds);
+
+                            }
+                            catch(e){
+                                console.log("error finding galleryItem with id " + value);
+                            }
+
                         }
 
 
@@ -353,7 +365,7 @@ app.post(
                         userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItems = galleryItems;
 
                         response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
-                        console.log("narration object array is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
+                        console.log("user is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
 
 
                     }
@@ -368,7 +380,7 @@ app.set('views', __dirname + '/tpl');
 app.use(express.static(__dirname + '/public'));
 //app.listen(3700);
 app.listen(5000);
-//app.listen(27017);
+app.listen(27017);
 //app.get('/', function(req, res){
 //    res.render('index');
 //});
