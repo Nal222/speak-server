@@ -118,7 +118,7 @@ app.post(
                         //console.log("user before changing order is " + JSON.stringify(user));
                         user.galleryItemIds = request.body.galleryItemIds;
                         //console.log("USER FROM DOING STOP SORTING IS " + JSON.stringify(user));
-                        console.log("Gallery Item Ids after sorting from request is " + request.body.galleryItemIds + "");
+                        console.log("Gallery Item Ids after sorting or deleting from request is " + request.body.galleryItemIds + "");
                         speakAppUserCollection.save(user);
                         //response.send(galleryItemIds);
                         response.send(user.galleryItemIds);
