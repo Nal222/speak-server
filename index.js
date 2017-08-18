@@ -233,6 +233,8 @@ app.post(
                                     user.narrationIds = user.narrationIds || [];
                                     user.narrationIds.push(result.insertedId);
                                     speakAppUserCollection.save(user);
+                                    response.send(result.insertedId);
+
                                 }
                             );
 
@@ -378,7 +380,7 @@ app.post(
 
 app.set('views', __dirname + '/tpl');
 app.use(express.static(__dirname + '/public'));
-//app.listen(3700);
+app.listen(3700);
 app.listen(5000);
 app.listen(27017);
 //app.get('/', function(req, res){
