@@ -30,21 +30,25 @@ process.on('uncaughtException', function (err) {
 });
 //var db;
 
+async function connectToMongoClient(){
+    return await MongoClient.connect(usersUrl);
+}
 
 app.post(
     '/register',
     function (request, response) {
-        co(
-            function*() {
+
+        (
+            async ()=>{
                 console.log("REQUEST BODY IS " + JSON.stringify(request.body));
                 console.log("REQUEST PATH IS " + request.path);
                 //response.json({name: "Nalini"});
-                var db = yield MongoClient.connect(usersUrl);
+                var db = await MongoClient.connect(usersUrl);
                 console.log("Connected correctly to server");
                 var userName = request.body.username;
                 var
                     speakAppUserCollection = db.collection('speakappuser'),
-                    myDocument = yield speakAppUserCollection.findOne({username: userName})
+                    myDocument = await speakAppUserCollection.findOne({username: userName})
                 ;
                 console.log("myDocument " + JSON.stringify(myDocument));
                 if (myDocument) {
@@ -56,7 +60,7 @@ app.post(
                     console.log("Inside else if myDocument doesn't exist");
                     usernameTaken = false;
                 }
-                var myDocument2 = yield speakAppUserCollection.findOne({password: request.body.password});
+                var myDocument2 = await speakAppUserCollection.findOne({password: request.body.password});
                 console.log("myDocument2 " + JSON.stringify(myDocument2));
                 if (myDocument2) {
                     //response.write("Password exists in database");
@@ -80,52 +84,52 @@ app.post(
                 if (usernameTaken == false && passwordTaken == false) {
                     response.write("ChooseImagesForImageGalleryPage");
                     console.log("Reached inside usernametaken and password taken");
-                    yield speakAppUserCollection.insertOne(request.body);
+                    await speakAppUserCollection.insertOne(request.body);
                     console.log("Username and password inserting into database");
                 }
                 db.close();
                 response.end();
             }
-        );
+        )();
     }
 );
 
+async function getUser(db, request){
+    const speakAppUserCollection = db.collection('speakappuser');
+    return await speakAppUserCollection.findOne(
+        {
+            username: request.body.username,
+            password: request.body.password
+
+        }
+    )
+}
 
 app.post(
     '/chooseImagesAndImageOrder',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
-        //response.json({name: "Nalini Chawla"});
-        MongoClient.connect(
-            usersUrl,
-            function (err, db) {
-                if (err) {
-                    return console.dir(err);
-                }
-                co(
-                    function*() {
-                        var
-                            speakAppUserCollection = db.collection('speakappuser'),
-                            user = yield speakAppUserCollection.findOne(
-                                {
-                                    username: request.body.username,
-                                    password: request.body.password
 
-                                }
-                            )
-                            ;
-                        //console.log("user before changing order is " + JSON.stringify(user));
-                        user.galleryItemIds = request.body.galleryItemIds;
-                        //console.log("USER FROM DOING STOP SORTING IS " + JSON.stringify(user));
-                        console.log("Gallery Item Ids after sorting or deleting from request is " + request.body.galleryItemIds + "");
-                        speakAppUserCollection.save(user);
-                        //response.send(galleryItemIds);
-                        response.send(user.galleryItemIds);
-                    }
-                );
+        (
+            async ()=>{
+                const db = await MongoClient.connect(usersUrl);
+                /*if (err) {
+                    return console.dir(err);
+                }*/
+                var
+                    speakAppUserCollection = db.collection('speakappuser'),
+                    user = await getUser(db, request)
+                ;
+                //console.log("user before changing order is " + JSON.stringify(user));
+                user.galleryItemIds = request.body.galleryItemIds;
+                //console.log("USER FROM DOING STOP SORTING IS " + JSON.stringify(user));
+                console.log("Gallery Item Ids after sorting or deleting from request is " + request.body.galleryItemIds + "");
+                speakAppUserCollection.save(user);
+                //response.send(galleryItemIds);
+                response.send(user.galleryItemIds);
             }
-        );
+        )();
     }
 );
 
@@ -164,14 +168,8 @@ app.post(
                             function*() {
                                 var
                                     speakAppUserCollection = db.collection('speakappuser'),
-                                    user = yield speakAppUserCollection.findOne(
-                                        {
-                                            username: request.body.username,
-                                            password: request.body.password
-
-                                        }
-                                    )
-                                    ;
+                                    user = yield getUser(db, request)
+                                ;
                                 console.log("user is " + user);
                                 user.galleryItemIds = user.galleryItemIds || [];
                                 user.galleryItemIds.push(result.insertedId);
@@ -186,6 +184,14 @@ app.post(
         );
     }
 );
+
+
+const saveNarration =
+    async ()=>{
+        const db = await MongoClient.connect(usersUrl);
+    }
+;
+
 
 app.post(
     '/Narrations',
@@ -286,95 +292,107 @@ app.post(
     }
 );
 
+async function getX(){
+    return 5;
+}
+
+async function getXMultipliedBy7(){
+    return (await getX()) * 7;
+}
+
 app.post(
     '/login',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
         //response.json({name: "Nalini Chawla"});
-        MongoClient.connect(
-            usersUrl,
-            function (err, db) {
+
+        (
+            async ()=>{
+
+                const db = await MongoClient.connect(usersUrl);
+
+                /*
                 if (err) {
                     return console.dir(err);
                 }
-                co(
-                    function*() {
-                        var
-                            narrations = [],
-                            galleryItems = [],
-                            speakAppNarrationCollection = db.collection('Narrations'),
-                            speakAppGalleryItemCollection = db.collection('GalleryItems');
-                            speakAppUserCollection = db.collection('speakappuser'),
-                            userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = yield speakAppUserCollection.findOne(
-                                {
-                                    username: request.body.username,
-                                    password: request.body.password
-                                }
-                            )
-                        ;
-                        //new ObjectID(value)
-                        for(const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds){
-                            try{
-                                console.log("finding narration with id " + value);
-                                narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
-                                    {
-                                        _id: new ObjectID(value)
-                                    }
-                                );
-                                narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
-                                narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+                */
 
-                            }
-                            catch(e){
-                                console.log("error finding narration with id " + value);
-                            }
-
+                var
+                    narrations = [],
+                    galleryItems = [],
+                    speakAppNarrationCollection = db.collection('Narrations'),
+                    speakAppGalleryItemCollection = db.collection('GalleryItems');
+                    speakAppUserCollection = db.collection('speakappuser'),
+                    userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = await speakAppUserCollection.findOne(
+                        {
+                            username: request.body.username,
+                            password: request.body.password
                         }
-                        for(const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds){
-                            try{
-                                console.log("finding gallery item with id " + value);
-                                galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = yield speakAppGalleryItemCollection.findOne(
-                                    {
-                                        _id: new ObjectID(value)
-                                    }
-                                );
-                                //galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
-                                galleryItems.push(galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds);
-
+                    )
+                ;
+                //new ObjectID(value)
+                for(const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds){
+                    try{
+                        console.log("finding narration with id " + value);
+                        narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = await speakAppNarrationCollection.findOne(
+                            {
+                                _id: new ObjectID(value)
                             }
-                            catch(e){
-                                console.log("error finding galleryItem with id " + value);
-                            }
-
-                        }
-
-
-                        //Yield doesn't work inside nested non generator function, even arrow function
-
-                        //userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds.forEach(
-                        //    value=>{
-                        //        narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
-                         //           {
-                        //                _id: new ObjectID(value)
-                         //           }
-                           //     );
-                         //       narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
-                        //    }
-                        //);
-
-                        userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrations = narrations;
-                        userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItems = galleryItems;
-
-                        response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
-                        console.log("user is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
-
+                        );
+                        narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+                        narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
 
                     }
-                );
+                    catch(e){
+                        console.log("error finding narration with id " + value);
+                    }
+
+                }
+                for(const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds){
+                    try{
+                        console.log("finding gallery item with id " + value);
+                        galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = await speakAppGalleryItemCollection.findOne(
+                            {
+                                _id: new ObjectID(value)
+                            }
+                        );
+                        //galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+                        galleryItems.push(galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds);
+
+                    }
+                    catch(e){
+                        console.log("error finding galleryItem with id " + value);
+                    }
+
+                }
+
+
+                //Yield doesn't work inside nested non generator function, even arrow function
+
+                //userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds.forEach(
+                //    value=>{
+                //        narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = yield speakAppNarrationCollection.findOne(
+                //           {
+                //                _id: new ObjectID(value)
+                //           }
+                //     );
+                //       narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+                //    }
+                //);
+
+                userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrations = narrations;
+                userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItems = galleryItems;
+
+                response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
+                console.log("user is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
 
             }
-        );
+        )();
+
+        //logIn();
+
+
     }
 );
 
