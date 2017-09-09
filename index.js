@@ -184,6 +184,28 @@ app.post(
         );
     }
 );
+app.post(
+    '/getAllNarrations',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+
+        (async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl)
+                    speakAppNarrationCollection = db.collection('Narrations'),
+                    allNarrations = await speakAppNarrationCollection.find().toArray();
+                ;
+                console.log("ALL NARRATIONS ARE " + JSON.stringify(allNarrations));
+                response.send(allNarrations);
+
+                // Close the db
+                db.close();
+            }
+        )();
+    }
+);
 
 
 const saveNarration =
@@ -340,7 +362,7 @@ app.post(
                                 _id: new ObjectID(value)
                             }
                         );
-                        narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+                        //narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
                         narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
 
                     }
