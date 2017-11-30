@@ -85,6 +85,7 @@ app.post(
                     response.write("ChooseImagesForImageGalleryPage");
                     console.log("Reached inside usernametaken and password taken");
                     await speakAppUserCollection.insertOne(request.body);
+                    console.log("USER IS " + JSON.stringify(user));
                     console.log("Username and password inserting into database");
                 }
                 db.close();
@@ -126,6 +127,7 @@ app.post(
                 //console.log("USER FROM DOING STOP SORTING IS " + JSON.stringify(user));
                 console.log("Gallery Item Ids after sorting or deleting from request is " + request.body.galleryItemIds + "");
                 speakAppUserCollection.save(user);
+                //TODO: Save gallery items i.e. images to gallerItemsCollection matching the galleryItemIds
                 //response.send(galleryItemIds);
                 response.send(user.galleryItemIds);
             }
@@ -185,6 +187,9 @@ app.post(
     }
 );
 app.post(
+    '/deleteNarrationFromDatabase'
+);
+app.post(
     '/getAllNarrations',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
@@ -193,7 +198,7 @@ app.post(
 
         (async ()=>{
                 var
-                    db = await MongoClient.connect(usersUrl)
+                    db = await MongoClient.connect(usersUrl),
                     speakAppNarrationCollection = db.collection('Narrations'),
                     allNarrations = await speakAppNarrationCollection.find().toArray();
                 ;
@@ -280,39 +285,33 @@ app.post(
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
         //response.json({name: "Nalini Chawla"});
-        MongoClient.connect(
-            usersUrl,
-            function (err, db) {
-                if (err) {
-                    return console.dir(err);
-                }
-                co(
-                    function*() {
-                        var
-                            speakAppNarrationCollection = db.collection('Narrations'),
-                            narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId = yield speakAppNarrationCollection.findOne(
-                                {
-                                    _id: new ObjectID(request.body.narrationId)
-                                }
-                            )
-                            ;
-                        console.log("narration object matching to audiofileId from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId));
-                        narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches = request.body.slideSwitches;
-
-                         //narration.slideSwitches = narration.slideSwitches || [];
-                         //narration.slideSwitches.push(request.body.slideSwitches);
-
-                        speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
-                        console.log("narration object after saving slideSwitches is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId));
-                        response.send(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches);
-
-                    }
+        (
+            async ()=>{
+            var
+                db = await MongoClient.connect(usersUrl),
+                speakAppNarrationCollection = db.collection('Narrations'),
+                narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId = await speakAppNarrationCollection.findOne(
+                                    {
+                                        _id: new ObjectID(request.body.narrationId)
+                                    }
                 );
 
+                console.log("narration object matching to audiofileId from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId));
+                narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches = request.body.slideSwitches;
+
+                 //narration.slideSwitches = narration.slideSwitches || [];
+                 //narration.slideSwitches.push(request.body.slideSwitches);
+
+                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId);
+                console.log("narration object after saving slideSwitches is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId));
+                response.send(narrationObjectWithMatchingNarrationIdToSlideSwitchesRequestNarrationId.slideSwitches);
+                db.close();
             }
-        );
+        )();
     }
 );
+
+
 
 async function getX(){
     return 5;
@@ -358,7 +357,7 @@ app.post(
                     for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
                         try {
                             console.log("finding narration with id " + value);
-                            narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = await speakAppNarrationCollection.findOne(
+                            const narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = await speakAppNarrationCollection.findOne(
                                 {
                                     _id: new ObjectID(value)
                                 }
@@ -375,7 +374,7 @@ app.post(
                     for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds) {
                         try {
                             console.log("finding gallery item with id " + value);
-                            galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = await speakAppGalleryItemCollection.findOne(
+                            const galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = await speakAppGalleryItemCollection.findOne(
                                 {
                                     _id: new ObjectID(value)
                                 }
@@ -419,6 +418,43 @@ app.post(
         )();
     }
 );
+
+app.post(
+    '/publishNarration',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        (
+            async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    speakAppNarrationCollection = db.collection('Narrations'),
+                    narrationObjectWithMatchingNarrationIdToPublishNarrationId = await speakAppNarrationCollection.findOne(
+                        {
+                            _id: new ObjectID(request.body.narrationId)
+                        }
+                    );
+
+                console.log("narration object matching to narrationid of narration to be published from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToPublishNarrationId));
+                narrationObjectWithMatchingNarrationIdToPublishNarrationId.published = true;
+
+                //narration.slideSwitches = narration.slideSwitches || [];
+                //narration.slideSwitches.push(request.body.slideSwitches);
+
+                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToPublishNarrationId);
+                console.log("narration object after publishing and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToPublishNarrationId));
+                response.send(narrationObjectWithMatchingNarrationIdToPublishNarrationId);
+                db.close();
+            }
+        )();
+    }
+);
+
+
+
+
+
 
 app.set('views', __dirname + '/tpl');
 app.use(express.static(__dirname + '/public'));
