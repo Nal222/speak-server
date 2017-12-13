@@ -28,7 +28,6 @@ console.log("hello");
 process.on('uncaughtException', function (err) {
     console.log("There has been an error: " + err);
 });
-//var db;
 
 async function connectToMongoClient(){
     return await MongoClient.connect(usersUrl);
@@ -84,7 +83,7 @@ app.post(
                 if (usernameTaken == false && passwordTaken == false) {
                     response.write("ChooseImagesForImageGalleryPage");
                     console.log("Reached inside usernametaken and password taken");
-                    await speakAppUserCollection.insertOne(request.body);
+                    var user = await speakAppUserCollection.insertOne(request.body);
                     console.log("USER IS " + JSON.stringify(user));
                     console.log("Username and password inserting into database");
                 }
@@ -97,13 +96,14 @@ app.post(
 
 async function getUser(db, request){
     const speakAppUserCollection = db.collection('speakappuser');
+    console.log("USER OBJECT IS " + request.body.username + "PASSWORD IS " + request.body.password);
     return await speakAppUserCollection.findOne(
         {
             username: request.body.username,
             password: request.body.password
 
         }
-    )
+    );
 }
 
 app.post(
@@ -130,6 +130,7 @@ app.post(
                 //TODO: Save gallery items i.e. images to gallerItemsCollection matching the galleryItemIds
                 //response.send(galleryItemIds);
                 response.send(user.galleryItemIds);
+                db.close();
             }
         )();
     }
@@ -142,50 +143,37 @@ app.post(
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
         //response.json({name: "Nalini Chawla"});
+        (
+            async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    collection = db.collection('GalleryItems'),
+                    result =
+                        await
+                            collection.insertOne(
+                                {
+                                    url: request.body.url
+                                }
+                            )
+                ;
 
-        MongoClient.connect(
-            usersUrl,
-            function (err, db) {
-                console.log('1');
-                if (err) {
-                    console.log('2');
-                    return console.dir(err);
-                }
-                console.log('3');
-                var collection = db.collection('GalleryItems');
-                console.log('3a');
-                collection.insertOne(
-                    {url: request.body.url},
-                    function (err, result) {
-                        console.log('4');
-                        //console.log("earlier attempt at getting saved object id which is " + result._id);
-                        //collection.find(result._id);
-                        //var objectidofnarrationobjectString = (collection.find(result._id)).toString();
-                        //var objectidofnarrationobjectHex = (collection.find(result._id)).toHexString();
-
-                        console.log("objectid of gallery item  object is string " + result.insertedId + ", error is " + err + ", request.body is " + JSON.stringify(request.body));
-                        //audioFileId = result.insertedId;
-                        //response.send(result.insertedId + "");
-                        co(
-                            function*() {
-                                var
-                                    speakAppUserCollection = db.collection('speakappuser'),
-                                    user = yield getUser(db, request)
-                                ;
-                                console.log("user is " + user);
-                                user.galleryItemIds = user.galleryItemIds || [];
-                                user.galleryItemIds.push(result.insertedId);
-                                speakAppUserCollection.save(user);
-                                response.send({galleryItemId: result.insertedId});
-                            }
-                        );
-
-                    }
-                );
+                console.log("objectid of gallery item  object is string " + result.insertedId + ", request.body is " + JSON.stringify(request.body));
+                var
+                    speakAppUserCollection = db.collection('speakappuser'),
+                    user = await getUser(db, request)
+                ;
+                console.log("user is " + JSON.stringify(user));
+                user.galleryItemIds = user.galleryItemIds || [];
+                user.galleryItemIds.push(result.insertedId);
+                speakAppUserCollection.save(user);
+                response.send({galleryItemId: result.insertedId});
+                db.close();
             }
-        );
+        )();
     }
 );
+
+
 app.post(
     '/deleteNarrationFromDatabase'
 );
@@ -194,9 +182,8 @@ app.post(
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
-        //response.json({name: "Nalini Chawla"});
-
-        (async ()=>{
+        (
+            async ()=>{
                 var
                     db = await MongoClient.connect(usersUrl),
                     speakAppNarrationCollection = db.collection('Narrations'),
@@ -204,77 +191,43 @@ app.post(
                 ;
                 console.log("ALL NARRATIONS ARE " + JSON.stringify(allNarrations));
                 response.send(allNarrations);
-
-                // Close the db
                 db.close();
             }
         )();
     }
 );
 
-
-const saveNarration =
-    async ()=>{
-        const db = await MongoClient.connect(usersUrl);
-    }
-;
-
-
 app.post(
     '/Narrations',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
-        //response.json({name: "Nalini Chawla"});
 
-        MongoClient.connect(
-            usersUrl,
-            function (err, db) {
-                console.log('1');
-                if (err) {
-                    console.log('2');
-                    return console.dir(err);
-                }
-                console.log('3');
-                var collection = db.collection('Narrations');
-                console.log('3a');
-                collection.insertOne(
-                    request.body.narration,
-                    function (err, result) {
-                        console.log('4');
-                        //console.log("earlier attempt at getting saved object id which is " + result._id);
-                        //collection.find(result._id);
-                            //var objectidofnarrationobjectString = (collection.find(result._id)).toString();
-                            //var objectidofnarrationobjectHex = (collection.find(result._id)).toHexString();
-
-                            console.log("objectid of narration object is string " + result.insertedId + ", error is " + err + ", request.body is " + JSON.stringify(request.body));
-                            //audioFileId = result.insertedId;
-                            //response.send(result.insertedId + "");
-                            co(
-                                function*() {
-                                    var
-                                        speakAppUserCollection = db.collection('speakappuser'),
-                                        user = yield speakAppUserCollection.findOne(
-                                            {
-                                                username: request.body.username,
-                                                password: request.body.password
-
-                                            }
-                                        )
-                                        ;
-                                    console.log("user is " + user);
-                                    user.narrationIds = user.narrationIds || [];
-                                    user.narrationIds.push(result.insertedId);
-                                    speakAppUserCollection.save(user);
-                                    response.send(result.insertedId);
-
-                                }
-                            );
-
-                    }
-                );
+        (
+            async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    collection = db.collection('Narrations')
+                    result =
+                        await
+                            collection.insertOne(
+                                request.body.narration
+                            )
+                        ;
+                    console.log("objectid of narration object is string " + result.insertedId + ", request.body is " + JSON.stringify(request.body));
+                    var
+                        speakAppUserCollection = db.collection('speakappuser'),
+                        user = await getUser(db, request)
+                    ;
+                    console.log("user is " + user);
+                    user.narrationIds = user.narrationIds || [];
+                    user.narrationIds.push(result.insertedId);
+                    speakAppUserCollection.save(user);
+                    response.send(result.insertedId);
+                    db.close();
             }
-        );
+        )();
+
     }
 );
 
@@ -311,33 +264,16 @@ app.post(
     }
 );
 
-
-
-async function getX(){
-    return 5;
-}
-
-async function getXMultipliedBy7(){
-    return (await getX()) * 7;
-}
-
 app.post(
     '/login',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
-        //response.json({name: "Nalini Chawla"});
 
         (
             async ()=>{
 
                 const db = await MongoClient.connect(usersUrl);
-
-                /*
-                if (err) {
-                    return console.dir(err);
-                }
-                */
 
                 var
                     narrations = [],
@@ -414,6 +350,7 @@ app.post(
                     response.send("Invalid username or password");
                 }
                 response.end();
+                db.close();
             }
         )();
     }
