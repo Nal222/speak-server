@@ -387,6 +387,37 @@ app.post(
         )();
     }
 );
+app.post(
+    '/unpublishNarration',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        (
+            async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    speakAppNarrationCollection = db.collection('Narrations'),
+                    narrationObjectWithMatchingNarrationIdToUnPublishNarrationId = await speakAppNarrationCollection.findOne(
+                        {
+                            _id: new ObjectID(request.body.narrationId)
+                        }
+                    );
+
+                console.log("narration object matching to narrationid of narration to be unpublished from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId));
+                narrationObjectWithMatchingNarrationIdToUnPublishNarrationId.published = false;
+
+                //narration.slideSwitches = narration.slideSwitches || [];
+                //narration.slideSwitches.push(request.body.slideSwitches);
+
+                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId);
+                console.log("narration object after unpublishing and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId));
+                response.send(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId);
+                db.close();
+            }
+        )();
+    }
+);
 
 
 
