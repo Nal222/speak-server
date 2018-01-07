@@ -178,7 +178,7 @@ app.post(
     '/deleteNarrationFromDatabase'
 );
 app.post(
-    '/getAllNarrations',
+    '/getAllPublishedNarrations',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
@@ -187,10 +187,14 @@ app.post(
                 var
                     db = await MongoClient.connect(usersUrl),
                     speakAppNarrationCollection = db.collection('Narrations'),
-                    allNarrations = await speakAppNarrationCollection.find().toArray();
+                    allPublishedNarrations = await speakAppNarrationCollection.find(
+                        {
+                            "published" : true
+                        }
+                    ).toArray()
                 ;
-                console.log("ALL NARRATIONS ARE " + JSON.stringify(allNarrations));
-                response.send(allNarrations);
+                console.log("ALL PUBLISHED NARRATIONS ARE " + JSON.stringify(allPublishedNarrations));
+                response.send(allPublishedNarrations);
                 db.close();
             }
         )();
