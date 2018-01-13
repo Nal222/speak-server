@@ -348,6 +348,7 @@ app.post(
 
                     response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
                     console.log("user is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
+                    console.log("Narration title set at registration in user object is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.title));
                 }
                 else{
                     console.log("THIS USERNAME AND/OR PASSWORD DOES NOT EXIST IN THE DATABASE");
