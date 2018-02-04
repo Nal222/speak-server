@@ -175,7 +175,36 @@ app.post(
 
 
 app.post(
-    '/deleteNarrationFromDatabase'
+    '/deleteNarrationsFromDatabase',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        (
+            async ()=> {
+
+                const db = await MongoClient.connect(usersUrl);
+
+                var speakAppNarrationCollection = db.collection('Narrations');
+
+                for (const value of request.body.narrationIds) {
+                    try {
+                        const narrationObjectWithMatchingNarrationIdToNarrationIdToDeleteFromClient = await speakAppNarrationCollection.findOne(
+                            {
+                                _id: new ObjectID(value)
+                            }
+                        );
+                        console.log("Narration object before deletion is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationIdToDeleteFromClient));
+                        await speakAppNarrationCollection.deleteOne(narrationObjectWithMatchingNarrationIdToNarrationIdToDeleteFromClient);
+                        console.log("Narration object after deletion is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationIdToDeleteFromClient));
+
+                    }
+                    catch (e) {
+                        console.log("error finding narration object with id " + value);
+                    }
+                }
+            }
+        )();
+    }
 );
 app.post(
     '/getAllPublishedNarrations',
@@ -364,8 +393,8 @@ app.post(
 app.post(
     '/updateNarrationTitle',
     function (request, response) {
-        //console.log("REQUEST BODY IS " + JSON.stringify(request.body));
-        //console.log("REQUEST PATH IS " + request.path);
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
         //response.json({name: "Nalini Chawla"});
         (
             async ()=>{
@@ -385,7 +414,7 @@ app.post(
                 //narration.slideSwitches.push(request.body.slideSwitches);
 
                 speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId);
-                //console.log("narration object after changing title and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId));
+                console.log("narration object after changing title and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId));
                 response.send(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId);
                 db.close();
             }
