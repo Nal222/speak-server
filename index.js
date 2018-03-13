@@ -184,13 +184,15 @@ app.post(
 
                 const db = await MongoClient.connect(usersUrl);
 
-                var speakAppNarrationCollection = db.collection('Narrations');
+                const speakAppNarrationCollection = db.collection('Narrations');
+                //var narrationIdsArray = [];
+                var narrationIdsArray = new Array(request.body.narrationIds);
 
-                for (const value of request.body.narrationIds) {
+                for (let i=0; i<narrationIdsArray.length; i++) {
                     try {
                         const narrationObjectWithMatchingNarrationIdToNarrationIdToDeleteFromClient = await speakAppNarrationCollection.findOne(
                             {
-                                _id: new ObjectID(value)
+                                _id: new ObjectID(narrationIdsArray[i])
                             }
                         );
                         console.log("Narration object before deletion is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationIdToDeleteFromClient));
@@ -199,7 +201,7 @@ app.post(
 
                     }
                     catch (e) {
-                        console.log("error finding narration object with id " + value);
+                        console.log("error finding narration object with id ");
                     }
                 }
             }
@@ -388,6 +390,41 @@ app.post(
             }
         )();
     }
+);
+app.post(
+    '/updateNarrationsTitle',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        (
+            async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    speakAppNarrationCollection = db.collection('Narrations')
+                ;
+                for(const value of request.body.narrationIds) {
+                    narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId = await speakAppNarrationCollection.findOne(
+                        {
+                            _id: new ObjectID(value)
+                        }
+                    );
+
+                    //console.log("narration object matching to narrationid of narration of which title has changed from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId));
+                    narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId.title = request.body.title;
+
+                    //narration.slideSwitches = narration.slideSwitches || [];
+                    //narration.slideSwitches.push(request.body.slideSwitches);
+
+                    speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId);
+                    console.log("narration object after changing title and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId));
+                    response.send(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId);
+                }
+                db.close();
+            }
+        )();
+    }
+
 );
 
 app.post(
