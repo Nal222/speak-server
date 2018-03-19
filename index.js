@@ -392,6 +392,38 @@ app.post(
     }
 );
 app.post(
+    '/loginCommentsPage',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        (
+            async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    speakAppUserCollection = db.collection('speakappuser'),
+                    userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = await speakAppUserCollection.findOne(
+                        {
+                            username: request.body.username,
+                            password: request.body.password
+                        }
+                    )
+                ;
+                if(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword) {
+                    var userID = userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword._id;
+                    console.log("UserID of comment logged in user is " + userID);
+                    response.send(userID);
+                }
+                else{
+                    console.log("THIS USERNAME AND/OR PASSWORD DOES NOT EXIST IN THE DATABASE");
+                    response.send("Invalid username or password");
+                }
+                response.end();
+                db.close();
+            }
+        )();
+    }
+);
+app.post(
     '/updateNarrationsTitle',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
@@ -517,6 +549,33 @@ app.post(
                 speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId);
                 console.log("narration object after unpublishing and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId));
                 response.send(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId);
+                db.close();
+            }
+        )();
+    }
+);
+app.post(
+    '/saveComment',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        (
+            async () => {
+            var
+                db = await MongoClient.connect(usersUrl),
+                speakAppNarrationCollection = db.collection('Narrations'),
+                narrationObjectWithMatchingNarrationIdToCommentNarrationId = await speakAppNarrationCollection.findOne(
+                    {
+                        _id: new ObjectID(request.body.narrationId)
+                    }
+                );
+                console.log("narration object matching to narrationid of narration comment to be saved from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToCommentNarrationId));
+                narrationObjectWithMatchingNarrationIdToCommentNarrationId.userID = request.body.userID;
+                narrationObjectWithMatchingNarrationIdToCommentNarrationId.comment = request.body.comment;
+                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToCommentNarrationId);
+                console.log("Narration Object after saving comment and userID is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToCommentNarrationId));
+                response.send(narrationObjectWithMatchingNarrationIdToCommentNarrationId);
                 db.close();
             }
         )();
