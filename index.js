@@ -564,23 +564,56 @@ app.post(
             async () => {
             var
                 db = await MongoClient.connect(usersUrl),
-                speakAppNarrationCollection = db.collection('Narrations'),
-                narrationObjectWithMatchingNarrationIdToCommentNarrationId = await speakAppNarrationCollection.findOne(
-                    {
-                        _id: new ObjectID(request.body.narrationId)
-                    }
-                );
-                console.log("narration object matching to narrationid of narration comment to be saved from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToCommentNarrationId));
-                narrationObjectWithMatchingNarrationIdToCommentNarrationId.userID = request.body.userID;
-                narrationObjectWithMatchingNarrationIdToCommentNarrationId.comment = request.body.comment;
-                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToCommentNarrationId);
-                console.log("Narration Object after saving comment and userID is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToCommentNarrationId));
-                response.send(narrationObjectWithMatchingNarrationIdToCommentNarrationId);
+                speakAppCommentsCollection = db.collection('Comments'),
+                timeInMs = Date.now(),
+                commentObject =
+                    await
+                        speakAppCommentsCollection.insertOne(
+                            {
+                                comment: request.body.comment,
+                                narrationId: request.body.narrationId,
+                                userID: request.body.userID,
+                                commentTimeInUnixTimestamp: timeInMs
+                            }
+                        )
+                ;
+                console.log("Saved comment object in comments collection is " + JSON.stringify(commentObject));
+                response.send(commentObject);
                 db.close();
             }
         )();
     }
 );
+app.post(
+    '/getAllComments',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        (
+            async () => {
+            var
+                db = await MongoClient.connect(usersUrl),
+                speakAppCommentsCollection = db.collection('Comments'),
+                commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed = await speakAppCommentsCollection.find(
+                    {
+                        narrationId: request.body.narrationId
+                    }
+                ).toArray();
+                console.log("Comment Objects matching with narration id of narration selected on public area of which comments want to be viewed are " + JSON.stringify(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed));
+                commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed.sort(function(a, b)
+                    {
+                        return b.commentTimeInUnixTimestamp - a.commentTimeInUnixTimestamp
+                    }
+                );
+                console.log("Sorted Comment Object Array is descending " + JSON.stringify(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed));
+                response.send(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed);
+                db.close();
+            }
+        )();
+    }
+);
+
 
 
 
