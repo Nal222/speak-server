@@ -570,7 +570,7 @@ app.post(
                     await
                         speakAppCommentsCollection.insertOne(
                             {
-                                comment: request.body.comment,
+                                commentText: request.body.comment,
                                 narrationId: request.body.narrationId,
                                 userID: request.body.userID,
                                 commentTimeInUnixTimestamp: timeInMs
@@ -585,7 +585,7 @@ app.post(
     }
 );
 app.post(
-    '/getAllComments',
+    '/getAllCommentsForSelectedNarration',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
@@ -600,15 +600,29 @@ app.post(
                         narrationId: request.body.narrationId
                     }
                 ).toArray();
-                console.log("Comment Objects matching with narration id of narration selected on public area of which comments want to be viewed are " + JSON.stringify(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed));
-                commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed.sort(function(a, b)
-                    {
-                        return b.commentTimeInUnixTimestamp - a.commentTimeInUnixTimestamp
-                    }
-                );
-                console.log("Sorted Comment Object Array is descending " + JSON.stringify(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed));
-                response.send(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed);
-                db.close();
+            console.log("Comment Objects matching with narration id of narration selected on public area of which comments want to be viewed are " + JSON.stringify(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed));
+            commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed.sort(function(a, b)
+                {
+                    return b.commentTimeInUnixTimestamp - a.commentTimeInUnixTimestamp
+                }
+            );
+            console.log("Sorted Comment Object Array is descending " + JSON.stringify(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed));
+            var speakAppUserCollection = db.collection('speakappuser');
+
+            for(const commentObject of commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed) {
+                const
+                    userObject = await speakAppUserCollection.findOne(
+                        {
+                            _id: new ObjectID(commentObject.userID)
+                        }
+                    )
+                ;
+                commentObject.username = userObject.username;
+                console.log(JSON.stringify(commentObject.commentText) + "," + JSON.stringify(userObject.username));
+            }
+            console.log("Comments and usernames are listed together as array " + JSON.stringify(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed));
+            response.send(commentObjectsWithMatchingNarrationIdToNarrationSelectedOnPublicAreaNarrationIdOfWhichCommentsNeedToBeViewed);
+            db.close();
             }
         )();
     }
