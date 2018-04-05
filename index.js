@@ -21,7 +21,8 @@ app.use(cors());
 //app.use(bodyParser.json());
 
 app.use(bodyParser.urlencoded({
-    extended: true
+    extended: true,
+    limit: '50mb'
 }));
 
 console.log("hello");
