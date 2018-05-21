@@ -6,24 +6,38 @@ var
     express = require('express'),
     cors = require('cors'),
     app = express(),
-    bodyParser = require('body-parser'),
     MongoClient = require('mongodb').MongoClient,
     co = require('co'),
     assert = require('assert'),
     usersUrl = 'mongodb://127.0.0.1:27017/Users',
     BinaryServer = require('binaryjs').BinaryServer,
+    http = require('http'),
     fs = require('fs'),
     wav = require('wav'),
-    ObjectID = require('mongodb').ObjectID
-;
+    ObjectID = require('mongodb').ObjectID,
+    path = require('path'),
+    multer = require('multer'),
+    //upload = multer({ dest: './public/Images/' }),
+    bodyParser = require('body-parser'),
+    //fileUpload = require('express-fileupload')
+    upload = multer({dest:'./public/Images/'});
 
+;
+//app.use(fileUpload());
 app.use(cors());
 //app.use(bodyParser.json());
 
+app.use(bodyParser.json());
+
+/*
 app.use(bodyParser.urlencoded({
-    extended: true,
-    limit: '50mb'
+    limit: '50mb',
+    extended: false
 }));
+*/
+app.use(express.static(__dirname+"/public"));
+
+
 
 console.log("hello");
 process.on('uncaughtException', function (err) {
@@ -173,7 +187,200 @@ app.post(
         )();
     }
 );
+/*
+var
+    Storage = multer.diskStorage({
+        destination: function(request, file, callback) {
+            callback(null, "./public/Images/");
+        },
+        filename: function(request, file, callback) {
+            callback(null, file.fieldname + "_" + Date.now() + "_" + file.originalname);
+        }
+    }),
+    upload = multer({
+        storage: Storage
+    }).array("imgUploader", 10)
+; //Field name and max count
 
+app.get("/", function(request, response) {
+    response.sendFile('index.html');
+});
+*/
+/*
+app.post('/uploadImages', function uploadImage(req, res) {
+    var storage = multer.diskStorage({
+        destination: "./public/Images/"
+    });
+    var upload = multer({
+        storage: storage
+    }).any();
+
+    upload(req, res, function(err) {
+        if (err) {
+            console.log(err);
+            return res.end('Error');
+        } else {
+            console.log(req.body);
+            req.formData.forEach(function(item) {
+                console.log(item);
+                // move your file to destination
+            });
+            res.end('File uploaded');
+        }
+    });
+});
+*/
+/*
+app.post(
+    '/uploadImages',
+    function (req, res) {
+        var imagedata = '';
+        res.setEncoding('binary');
+
+        res.on('data', function (chunk) {
+            imagedata += chunk
+        });
+
+        res.on('end', function () {
+            fs.writeFile(req, imagedata, 'binary', function (err) {
+                if (err) throw err;
+                console.log('File saved.')
+            });
+        });
+    }
+);
+*/
+app.post(
+    '/uploadImages',
+    upload.single('file'),
+    function (req, res, next) {
+        console.log(req.file);
+});
+/*
+app.post(
+    '/uploadImages',
+    function(req, res) {
+        if (!req.files)
+            return res.status(400).send('No files were uploaded.');
+
+        // The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
+        let imageFile = req.files.image_file;
+
+        // Use the mv() method to place the file somewhere on your server
+        imageFile.mv('./public/Images/filename.jpg', function(err) {
+            if (err)
+                return res.status(500).send(err);
+
+            res.send('File uploaded!');
+        });
+});
+*/
+/*
+app.post('/uploadImages', function (req, res) {
+    var tempPath = './temporaryImages',
+        targetPath = path.resolve('./public/Images/' + req.file);
+
+        fs.rename(tempPath, targetPath, function(err) {
+            if (err) throw err;
+            console.log("Upload completed!");
+        });
+
+});
+*/
+/*
+app.post(
+    '/uploadImages',
+    function (req, res) {
+        console.log(req.body);
+        //console.log(req.uploadedFiles);
+        console.log(req.file);
+        console.log(req.body.formData);
+        // get the temporary location of the file
+        var tmp_path = './temporaryImages';
+        // set where the file should actually exists - in this case it is in the "images" directory
+        var target_path = './public/Images/';
+        // move the file from the temporary location to the intended location
+        fs.rename(tmp_path, target_path, function(err) {
+            if (err) throw err;
+            // delete the temporary file, so that the explicitly set temporary upload dir does not get filled with unwanted files
+            fs.unlink(tmp_path, function() {
+                if (err) throw err;
+                res.send('File uploaded to: ' + target_path);
+                //res.send('File uploaded to: ' + target_path + ' - ' + req.files.image_file.size + ' bytes');
+            });
+        });
+    }
+);
+*/
+
+/*
+app.post(
+    '/uploadImages',
+    upload.array('uploadedImages', 3),
+    function(req, res){
+        (
+            async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    collection = db.collection('GalleryItems')
+                ;
+
+                var storage = multer.diskStorage({
+                    destination: "./public/Images/"
+                });
+                var upload = multer({
+                    storage: storage
+                }).any();
+                */
+/*
+                console.log("Files from user are " + req.files);
+                console.log("Request data from client is " + JSON.stringify(req.body));
+
+
+                upload(req, res, function(err) {
+                    if (err) {
+                        console.log(err);
+                        return res.end('Error');
+                    } else {
+                        console.log(req.body);
+                        req.files.forEach(function(item) {
+                            console.log(item);
+                            //move your file to destination
+                        });
+                        res.end('File uploaded');
+                    }
+                });
+
+
+                var result = await collection.insertOne(
+                    {
+                        url: req.path
+                    }
+                );
+                console.log("objectid of gallery item  object is string " + result.insertedId + ", url path is " + req.path);
+                var
+                    speakAppUserCollection = db.collection('speakappuser'),
+                    user = await getUser(db, req)
+                ;
+
+                console.log("user is " + JSON.stringify(user));
+                user.galleryItemIds = user.galleryItemIds || [];
+                user.galleryItemIds.push(result.insertedId);
+                speakAppUserCollection.save(user);
+                res.send({galleryItemId: result.insertedId});
+
+                let base64Image = fileDataEncodedString.split(';base64,').pop();
+                fs.writeFile(url, base64Image, {encoding: 'base64'}, function(err){
+                    if(err) throw err;
+                    console.log("File saved");
+                });
+
+                db.close();
+            }
+        )();
+    }
+);
+*/
 
 app.post(
     '/deleteNarrationsFromDatabase',
@@ -328,7 +535,7 @@ app.post(
                     //new ObjectID(value)
                     for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
                         try {
-                            console.log("finding narration with id " + value);
+                            //console.log("finding narration with id " + value);
                             const narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = await speakAppNarrationCollection.findOne(
                                 {
                                     _id: new ObjectID(value)
@@ -345,7 +552,7 @@ app.post(
                     }
                     for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds) {
                         try {
-                            console.log("finding gallery item with id " + value);
+                            //console.log("finding gallery item with id " + value);
                             const galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = await speakAppGalleryItemCollection.findOne(
                                 {
                                     _id: new ObjectID(value)
@@ -379,8 +586,8 @@ app.post(
                     userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItems = galleryItems;
 
                     response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
-                    console.log("user is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
-                    console.log("Narration title set at registration in user object is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.title));
+                    //console.log("user is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
+                    //console.log("Narration title set at registration in user object is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.title));
                 }
                 else{
                     console.log("THIS USERNAME AND/OR PASSWORD DOES NOT EXIST IN THE DATABASE");
