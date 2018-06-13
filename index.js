@@ -18,24 +18,38 @@ var
     path = require('path'),
     multer = require('multer'),
     //upload = multer({ dest: './public/Images/' }),
-    bodyParser = require('body-parser'),
+    bodyParser = require('body-parser')
     //fileUpload = require('express-fileupload')
-    upload = multer({dest:'./public/Images/'});
+    //upload = multer({dest:'./public/Images/'});
 
 ;
+
+var storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, './public/Images/')
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.fieldname + '-' + Date.now() + '.jpg')
+    }
+});
+
+var upload = multer({ storage: storage });
 //app.use(fileUpload());
 app.use(cors());
 //app.use(bodyParser.json());
 
-app.use(bodyParser.json());
+//app.use(bodyParser.json());
 
-/*
+//var urlencodedParser = bodyParser.urlencoded({ extended: false });
+//app.use(bodyParser.urlencoded({ extended: false }));
+
+
 app.use(bodyParser.urlencoded({
-    limit: '50mb',
-    extended: false
+    extended: true
 }));
-*/
-app.use(express.static(__dirname+"/public"));
+
+
+//app.use(express.static("public"));
 
 
 
@@ -60,6 +74,7 @@ app.post(
                 var db = await MongoClient.connect(usersUrl);
                 console.log("Connected correctly to server");
                 var userName = request.body.username;
+                console.log("userName IS " + userName);
                 var
                     speakAppUserCollection = db.collection('speakappuser'),
                     myDocument = await speakAppUserCollection.findOne({username: userName})
@@ -137,9 +152,10 @@ app.post(
                     speakAppUserCollection = db.collection('speakappuser'),
                     user = await getUser(db, request)
                 ;
-                //console.log("user before changing order is " + JSON.stringify(user));
+                console.log("user before changing order is " + JSON.stringify(user));
+                //const requestBodyParsed = JSON.parse(request.body);
                 user.galleryItemIds = request.body.galleryItemIds;
-                //console.log("USER FROM DOING STOP SORTING IS " + JSON.stringify(user));
+                console.log("USER FROM DOING STOP SORTING IS " + JSON.stringify(user));
                 console.log("Gallery Item Ids after sorting or deleting from request is " + request.body.galleryItemIds + "");
                 speakAppUserCollection.save(user);
                 //TODO: Save gallery items i.e. images to gallerItemsCollection matching the galleryItemIds
@@ -255,6 +271,41 @@ app.post(
     upload.single('file'),
     function (req, res, next) {
         console.log(req.file);
+        console.log(req.file.path);
+        console.log("Name of file on user's computer is " + req.file.originalname);
+        (
+            async ()=> {
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    collection = db.collection('GalleryItems')
+                ;
+                var result = await collection.insertOne(
+                    {
+                        url: "http://localhost:3700/Images/" + req.file.filename
+                    }
+                );
+                console.log("objectid of gallery item  object is string " + result.insertedId);
+                var
+                    speakAppUserCollection = db.collection('speakappuser'),
+                    user = await getUser(db, req)
+                ;
+                console.log("Request URL IS " + req.url);
+                console.log("user is " + JSON.stringify(user));
+                console.log("RESULT.INSERTEDID IS " + result.insertedId);
+                console.log("Username is " + req.body.username + "password is " + req.body.password);
+                user.galleryItemIds = user.galleryItemIds || [];
+                user.galleryItemIds.push(result.insertedId);
+                speakAppUserCollection.save(user);
+                console.log("FILENAME IS " + req.file.filename);
+                user.fileName = req.file.filename;
+                user.imageId = result.insertedId;
+                res.send(user);
+                //res.send({galleryItemId: result.insertedId});
+                db.close();
+
+
+            }
+        )();
 });
 /*
 app.post(
@@ -357,7 +408,7 @@ app.post(
                         url: req.path
                     }
                 );
-                console.log("objectid of gallery item  object is string " + result.insertedId + ", url path is " + req.path);
+                console.log("objectid of gallery item  object is string " + result.insertedId);
                 var
                     speakAppUserCollection = db.collection('speakappuser'),
                     user = await getUser(db, req)
@@ -451,12 +502,16 @@ app.post(
                 var
                     db = await MongoClient.connect(usersUrl),
                     collection = db.collection('Narrations')
-                    result =
-                        await
-                            collection.insertOne(
-                                request.body.narration
-                            )
-                        ;
+                ;
+
+                var result =
+                    await collection.insertOne({
+                            narration: request.body.narration
+                        }
+
+                    )
+                ;
+
                     console.log("objectid of narration object is string " + result.insertedId + ", request.body is " + JSON.stringify(request.body));
                     var
                         speakAppUserCollection = db.collection('speakappuser'),
@@ -533,38 +588,50 @@ app.post(
                 ;
                 if (userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword) {
                     //new ObjectID(value)
-                    for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
-                        try {
-                            //console.log("finding narration with id " + value);
-                            const narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = await speakAppNarrationCollection.findOne(
-                                {
-                                    _id: new ObjectID(value)
-                                }
-                            );
-                            //narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
-                            narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+                    console.log("USER OBJECT NARRATION IDS ARE " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds));
+                    if(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
+                        for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
+                            try {
+                                //console.log("finding narration with id " + value);
+                                const narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = await speakAppNarrationCollection.findOne(
+                                    {
+                                        _id: new ObjectID(value)
+                                    }
+                                );
+                                //narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+
+                                narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+
+                            }
+                            catch (e) {
+                                console.log("error finding narration with id " + value);
+                            }
 
                         }
-                        catch (e) {
-                            console.log("error finding narration with id " + value);
-                        }
-
+                        userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrations = narrations;
+                        //response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
                     }
-                    for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds) {
-                        try {
-                            //console.log("finding gallery item with id " + value);
-                            const galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = await speakAppGalleryItemCollection.findOne(
-                                {
-                                    _id: new ObjectID(value)
-                                }
-                            );
-                            //galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
-                            galleryItems.push(galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds);
+                    console.log("USER OBJECT GALLERYITEM IDS ARE " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds));
+                    if(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds) {
+                        for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItemIds) {
+                            try {
+                                //console.log("finding gallery item with id " + value);
+                                const galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds = await speakAppGalleryItemCollection.findOne(
+                                    {
+                                        _id: new ObjectID(value)
+                                    }
+                                );
+                                //galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+                                galleryItems.push(galleryItemObjectWithMatchingGalleryItemIdToUserObjectGalleryItemIds);
+
+                            }
+                            catch (e) {
+                                console.log("error finding galleryItem with id " + value);
+                            }
 
                         }
-                        catch (e) {
-                            console.log("error finding galleryItem with id " + value);
-                        }
+                        userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItems = galleryItems;
+                        //response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
 
                     }
 
@@ -582,8 +649,6 @@ app.post(
                     //    }
                     //);
 
-                    userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrations = narrations;
-                    userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.galleryItems = galleryItems;
 
                     response.send(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword);
                     //console.log("user is " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword));
