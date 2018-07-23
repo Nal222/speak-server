@@ -4,25 +4,24 @@
 
 var
     express = require('express'),
-    cors = require('cors'),
     app = express(),
+    cors = require('cors'),
+    bodyParser = require('body-parser'),
     MongoClient = require('mongodb').MongoClient,
     co = require('co'),
     assert = require('assert'),
     usersUrl = 'mongodb://127.0.0.1:27017/Users',
     BinaryServer = require('binaryjs').BinaryServer,
-    http = require('http'),
     fs = require('fs'),
     wav = require('wav'),
-    ObjectID = require('mongodb').ObjectID,
-    path = require('path'),
     multer = require('multer'),
-    //upload = multer({ dest: './public/Images/' }),
-    bodyParser = require('body-parser')
-    //fileUpload = require('express-fileupload')
-    //upload = multer({dest:'./public/Images/'});
-
+    ObjectID = require('mongodb').ObjectID
 ;
+
+app.use(cors());
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
 
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -35,7 +34,7 @@ var storage = multer.diskStorage({
 
 var upload = multer({ storage: storage });
 //app.use(fileUpload());
-app.use(cors());
+
 //app.use(bodyParser.json());
 
 //app.use(bodyParser.json());
@@ -44,9 +43,6 @@ app.use(cors());
 //app.use(bodyParser.urlencoded({ extended: false }));
 
 
-app.use(bodyParser.urlencoded({
-    extended: true
-}));
 
 
 //app.use(express.static("public"));
@@ -577,7 +573,7 @@ app.post(
                     narrations = [],
                     galleryItems = [],
                     speakAppNarrationCollection = db.collection('Narrations'),
-                    speakAppGalleryItemCollection = db.collection('GalleryItems');
+                    speakAppGalleryItemCollection = db.collection('GalleryItems'),
                     speakAppUserCollection = db.collection('speakappuser'),
                     userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = await speakAppUserCollection.findOne(
                         {
@@ -747,7 +743,8 @@ app.post(
                         {
                             _id: new ObjectID(request.body.narrationId)
                         }
-                    );
+                    )
+                ;
 
                 //console.log("narration object matching to narrationid of narration of which title has changed from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId));
                 narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId.title = request.body.title;
@@ -766,7 +763,7 @@ app.post(
 );
 
 app.post(
-    '/publishNarration',
+    '/publishNarrations',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
@@ -776,28 +773,65 @@ app.post(
                 var
                     db = await MongoClient.connect(usersUrl),
                     speakAppNarrationCollection = db.collection('Narrations'),
-                    narrationObjectWithMatchingNarrationIdToPublishNarrationId = await speakAppNarrationCollection.findOne(
+                    speakAppUserCollection = db.collection('speakappuser'),
+                    //narrationIdsArray = new Array(request.body.narrationIds),
+                    narrations = []
+                ;
+
+                for (var narrationId of request.body.narrationIds) {
+                    const narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient = await speakAppNarrationCollection.findOne(
                         {
-                            _id: new ObjectID(request.body.narrationId)
+                            _id: new ObjectID(narrationId)
                         }
                     );
+                    narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient.published = true;
+                    await speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
+                    //publishedNarrationObjects.push(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
 
-                console.log("narration object matching to narrationid of narration to be published from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToPublishNarrationId));
-                narrationObjectWithMatchingNarrationIdToPublishNarrationId.published = true;
 
-                //narration.slideSwitches = narration.slideSwitches || [];
-                //narration.slideSwitches.push(request.body.slideSwitches);
+                    console.log("narration object with id "+narrationId);
 
-                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToPublishNarrationId);
-                console.log("narration object after publishing and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToPublishNarrationId));
-                response.send(narrationObjectWithMatchingNarrationIdToPublishNarrationId);
+                }
+
+                var userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = await speakAppUserCollection.findOne(
+                        {
+                            username: request.body.username,
+                            password: request.body.password
+                        }
+                    )
+                ;
+                    //new ObjectID(value)
+                console.log("USER OBJECT NARRATION IDS ARE " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds));
+                if(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
+                    for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
+                        try {
+                            //console.log("finding narration with id " + value);
+                            const narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = await speakAppNarrationCollection.findOne(
+                                {
+                                    _id: new ObjectID(value)
+                                }
+                            );
+                            //narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+
+                            narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+
+                        }
+                        catch (e) {
+                            console.log("error finding narration with id " + value);
+                        }
+
+                    }
+                }
+                //var narrations = await speakAppNarrationCollection.find({}).toArray;
+                //response.send(publishedNarrationObjects);
+                response.send(narrations);
                 db.close();
             }
         )();
     }
 );
 app.post(
-    '/unpublishNarration',
+    '/unpublishNarrations',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
         console.log("REQUEST PATH IS " + request.path);
@@ -807,21 +841,58 @@ app.post(
                 var
                     db = await MongoClient.connect(usersUrl),
                     speakAppNarrationCollection = db.collection('Narrations'),
-                    narrationObjectWithMatchingNarrationIdToUnPublishNarrationId = await speakAppNarrationCollection.findOne(
+                    speakAppUserCollection = db.collection('speakappuser'),
+                    //narrationIdsArray = new Array(request.body.narrationIds),
+                    narrations = []
+                ;
+
+                for (var narrationId of request.body.narrationIds) {
+                    const narrationObjectWithMatchingNarrationIdToNarrationIdToUnpublishFromClient = await speakAppNarrationCollection.findOne(
                         {
-                            _id: new ObjectID(request.body.narrationId)
+                            _id: new ObjectID(narrationId)
                         }
                     );
+                    narrationObjectWithMatchingNarrationIdToNarrationIdToUnpublishFromClient.published = false;
+                    await speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationIdToUnpublishFromClient);
+                    //publishedNarrationObjects.push(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
 
-                console.log("narration object matching to narrationid of narration to be unpublished from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId));
-                narrationObjectWithMatchingNarrationIdToUnPublishNarrationId.published = false;
 
-                //narration.slideSwitches = narration.slideSwitches || [];
-                //narration.slideSwitches.push(request.body.slideSwitches);
+                    console.log("narration object with id "+narrationId);
 
-                speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId);
-                console.log("narration object after unpublishing and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId));
-                response.send(narrationObjectWithMatchingNarrationIdToUnPublishNarrationId);
+                }
+
+                var userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = await speakAppUserCollection.findOne(
+                    {
+                        username: request.body.username,
+                        password: request.body.password
+                    }
+                    )
+                ;
+                //new ObjectID(value)
+                console.log("USER OBJECT NARRATION IDS ARE " + JSON.stringify(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds));
+                if(userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
+                    for (const value of userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword.narrationIds) {
+                        try {
+                            //console.log("finding narration with id " + value);
+                            const narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds = await speakAppNarrationCollection.findOne(
+                                {
+                                    _id: new ObjectID(value)
+                                }
+                            );
+                            //narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds.audioFileId = narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds._id;
+
+                            narrations.push(narrationObjectWithMatchingNarrationIdToUserObjectNarrationIds);
+
+                        }
+                        catch (e) {
+                            console.log("error finding narration with id " + value);
+                        }
+
+                    }
+                }
+                //var narrations = await speakAppNarrationCollection.find({}).toArray;
+                //response.send(publishedNarrationObjects);
+                response.send(narrations);
                 db.close();
             }
         )();
