@@ -488,6 +488,65 @@ app.post(
 );
 
 app.post(
+    '/getNarrationsMatchingSearchInput',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        (
+            async ()=>{
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    speakAppNarrationCollection = db.collection("Narrations")
+                ;
+                db.ensureIndex(
+                    "Narrations",
+                    {
+                        title: "text"
+                    },
+                    function(err, indexname)
+                    {
+
+                    }
+                );
+                console.log("Search input is " + request.body.searchInput);
+                var narrationsSearched = speakAppNarrationCollection.find
+                (
+                    { "$text":
+                        {
+                            "$search": request.body.searchInput
+                        }
+                    }
+                    /*
+                    {
+                        document: 1,
+                        created: 1,
+                        _id: 1,
+                        textScore: {
+                            $meta: "textScore"
+                        }
+                    },
+                    {
+                        sort: {
+                            textScore: {
+                                $meta: "textScore"
+                            }
+                        }
+                    }
+                */
+                ).toArray();
+                Promise.resolve(narrationsSearched).then(function(values){
+                    console.log("NARRATIONS SEARCHED ARE " + JSON.stringify(values));
+                    response.send(values);
+                });
+                //console.log("NARRATIONS SEARCHED ARE " + Promise.resolve(narrationsSearched));
+                //response.send(Promise.resolve(narrationsSearched));
+                db.close();
+            }
+        )();
+    }
+);
+
+app.post(
     '/Narrations',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
@@ -501,10 +560,10 @@ app.post(
                 ;
 
                 var result =
-                    await collection.insertOne({
-                            narration: request.body.narration
+                    await collection.insertOne(
+                        {
+                            title: request.body.title
                         }
-
                     )
                 ;
 
