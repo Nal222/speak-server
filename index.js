@@ -96,22 +96,37 @@ app.post(
                     console.log("Inside else if myDocument2 doesn't exist");
                     passwordTaken = false;
                 }
-                console.log("username taken status " + usernameTaken + "password taken status " + passwordTaken);
+
+                var myDocument3 = await speakAppUserCollection.findOne({email: request.body.email});
+                console.log("myDocument3 " + JSON.stringify(myDocument3));
+                if (myDocument3) {
+                    //response.write("Password exists in database");
+                    console.log("Email already exists");
+                    var emailTaken = true;
+                }
+                else if (!myDocument3) {
+                    console.log("Inside else if myDocument3 doesn't exist");
+                    emailTaken = false;
+                }
+                console.log("username taken status " + usernameTaken + "password taken status " + passwordTaken + "email taken status " + emailTaken);
 
                 if(usernameTaken == true){
-                    console.log("reached inside usernameTaken == true")
+                    console.log("reached inside usernameTaken == true");
                     response.write("Username exists in database");
                 }
                 if(passwordTaken == true){
-                    console.log("Reached inside passwordTaken == true")
+                    console.log("Reached inside passwordTaken == true");
                     response.write("Password exists in database");
                 }
-                if (usernameTaken == false && passwordTaken == false) {
+                if(emailTaken == true){
+                    console.log("Reached inside emailTaken == true");
+                    response.write("Email exists in database");
+                }
+                if (usernameTaken == false && passwordTaken == false && emailTaken == false) {
                     response.write("ChooseImagesForImageGalleryPage");
-                    console.log("Reached inside usernametaken and password taken");
                     var user = await speakAppUserCollection.insertOne(request.body);
                     console.log("USER IS " + JSON.stringify(user));
-                    console.log("Username and password inserting into database");
+                    console.log("Username, password and email inserting into database");
                 }
                 db.close();
                 response.end();
