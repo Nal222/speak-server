@@ -148,6 +148,35 @@ async function getUser(db, request){
 }
 
 app.post(
+    '/checkEmailExists',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+
+        (
+            async ()=> {
+                const db = await MongoClient.connect(usersUrl);
+                /*if (err) {
+                    return console.dir(err);
+                }*/
+                var speakAppUserCollection = db.collection('speakappuser');
+                var myDocument = await speakAppUserCollection.findOne({email: request.body.email});
+                if(!myDocument){
+                    response.write("Does not exist");
+                    console.log(JSON.stringify(request.body) + "Email does not exist in database");
+                }
+                else if(myDocument){
+                    response.write("A link has been sent to your email address");
+                }
+                db.close();
+                response.end();
+
+            }
+        )();
+    }
+
+);
+app.post(
     '/chooseImagesAndImageOrder',
     function (request, response) {
         console.log("REQUEST BODY IS " + JSON.stringify(request.body));
