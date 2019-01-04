@@ -17,7 +17,7 @@ var
     multer = require('multer'),
     ObjectID = require('mongodb').ObjectID
 ;
-
+const uuidv4 = require('uuid/v4');
 app.use(cors());
 app.use(bodyParser.urlencoded({
     extended: true
@@ -166,6 +166,39 @@ app.post(
                     console.log(JSON.stringify(request.body) + "Email does not exist in database");
                 }
                 else if(myDocument){
+                    console.log("Email exists doc containing email is " + JSON.stringify(myDocument));
+                    var randomUUIDToken = uuidv4();
+                    console.log("Random token is " + randomUUIDToken);
+                    var myQuery = {email: request.body.email};
+                    if(!myDocument.randomToken){
+                        myDocument.randomToken = randomUUIDToken;
+                        var result1 = await speakAppUserCollection.deleteOne(myQuery);
+                        var resultDocumentWhichHasNewlyInsertedRandomTokenAndReplacesOldDocument = await speakAppUserCollection.insertOne(myDocument);
+                        console.log("Deleted document result is " + JSON.stringify(result1));
+                        console.log("Result document with newly inserted random token and replaces old document is " + JSON.stringify(resultDocumentWhichHasNewlyInsertedRandomTokenAndReplacesOldDocument));
+                    }
+                    else if(myDocument.randomToken){
+                        myDocument.randomToken = randomUUIDToken;
+                        var result2 = await speakAppUserCollection.deleteOne(myQuery);
+                        var resultDocumentWhichHasUpdatedRandomTokenAndReplacesOldDocument = await speakAppUserCollection.insertOne(myDocument);
+                        console.log("Deleted document result is " + JSON.stringify(result2));
+                        console.log("Result document with updated random token and replaces old document is " + JSON.stringify(resultDocumentWhichHasUpdatedRandomTokenAndReplacesOldDocument));
+
+
+                    }
+                    /*
+                    var myQuery = { randomToken: myDocument.randomToken };
+                    var newValues = { $set: { randomToken: randomUUIDToken } };
+
+                    var documentResultWithInsertedRandomToken = await speakAppUserCollection.findOneAndUpdate(
+                        myQuery,
+                        newValues, {
+                        returnOriginal: false,
+                        upsert: true }
+                    );
+                    */
+                    //console.log("Result is " + JSON.stringify(documentResultWithInsertedRandomToken));
+                    console.log("Reached after insert or update randomToken in matching email document");
                     response.write("A link has been sent to your email address");
                 }
                 db.close();
