@@ -169,7 +169,8 @@ app.post(
                     console.log("Email exists doc containing email is " + JSON.stringify(myDocument));
                     var randomUUIDToken = uuidv4();
                     console.log("Random token is " + randomUUIDToken);
-                    var myQuery = {email: request.body.email};
+                    //var myQuery = {email: request.body.email};
+                    /*
                     if(!myDocument.randomToken){
                         myDocument.randomToken = randomUUIDToken;
                         var result1 = await speakAppUserCollection.deleteOne(myQuery);
@@ -186,8 +187,9 @@ app.post(
 
 
                     }
-                    /*
-                    var myQuery = { randomToken: myDocument.randomToken };
+                    */
+                    //var myQuery = { randomToken: myDocument.randomToken };
+                    var myQuery = {email: request.body.email};
                     var newValues = { $set: { randomToken: randomUUIDToken } };
 
                     var documentResultWithInsertedRandomToken = await speakAppUserCollection.findOneAndUpdate(
@@ -196,8 +198,8 @@ app.post(
                         returnOriginal: false,
                         upsert: true }
                     );
-                    */
-                    //console.log("Result is " + JSON.stringify(documentResultWithInsertedRandomToken));
+
+                    console.log("Result is " + JSON.stringify(documentResultWithInsertedRandomToken));
                     console.log("Reached after insert or update randomToken in matching email document");
                     response.write("A link has been sent to your email address");
                 }
