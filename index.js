@@ -16,8 +16,10 @@ var
     wav = require('wav'),
     multer = require('multer'),
     ObjectID = require('mongodb').ObjectID
+    nodemailer = require('nodemailer')
 ;
 const uuidv4 = require('uuid/v4');
+
 app.use(cors());
 app.use(bodyParser.urlencoded({
     extended: true
@@ -201,6 +203,29 @@ app.post(
 
                     console.log("Result is " + JSON.stringify(documentResultWithInsertedRandomToken));
                     console.log("Reached after insert or update randomToken in matching email document");
+                    var transporter = nodemailer.createTransport({
+                        service: 'gmail',
+                        auth: {
+                            user: process.env.EMAIL_ADDRESS,
+                            pass: process.env.EMAIL_PASSWORD
+                        }
+                    });
+
+                    var mailOptions = {
+                        from: 'nalini.chawla10@gmail.com',
+                        to: request.body.email,
+                        subject: 'Sending Email using Node.js',
+                        text: 'That was easy!'
+                    };
+
+                    const sendMailFunction = transporter.sendMail(mailOptions,(error, info)=> {
+                        if (error) {
+                            console.log(error);
+                        } else {
+                            console.log('Email sent: ' + info.response);
+                        }
+                    });
+                    await sendMailFunction;
                     response.write("A link has been sent to your email address");
                 }
                 db.close();
@@ -913,10 +938,11 @@ app.post(
                     speakAppNarrationCollection = db.collection('Narrations'),
                     speakAppUserCollection = db.collection('speakappuser'),
                     //narrationIdsArray = new Array(request.body.narrationIds),
-                    narrations = []
+                    narrations = [],
+                    publishedNarrations = []
                 ;
 
-                for (var narrationId of request.body.narrationIds) {
+                for (const narrationId of request.body.narrationIds) {
                     const narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient = await speakAppNarrationCollection.findOne(
                         {
                             _id: new ObjectID(narrationId)
@@ -924,11 +950,12 @@ app.post(
                     );
                     narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient.published = true;
                     await speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
-                    //publishedNarrationObjects.push(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
-
-
+                    publishedNarrations.push(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
+                    console.log("Published narration objects are " + JSON.stringify(publishedNarrations));
                     console.log("narration object with id "+narrationId);
-
+                }
+                if(request.body.pageName == "recordNarrationPage"){
+                    response.send(publishedNarrations);
                 }
 
                 var userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = await speakAppUserCollection.findOne(
@@ -962,7 +989,9 @@ app.post(
                 }
                 //var narrations = await speakAppNarrationCollection.find({}).toArray;
                 //response.send(publishedNarrationObjects);
-                response.send(narrations);
+                if(request.body.pageName == "userAreaPage"){
+                    response.send(narrations);
+                }
                 db.close();
             }
         )();
