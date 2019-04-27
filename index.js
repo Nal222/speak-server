@@ -855,6 +855,7 @@ app.post(
         )();
     }
 );
+
 app.post(
     '/updateNarrationsTitle',
     function (request, response) {
@@ -865,25 +866,30 @@ app.post(
             async ()=>{
                 var
                     db = await MongoClient.connect(usersUrl),
-                    speakAppNarrationCollection = db.collection('Narrations')
+                    speakAppNarrationCollection = db.collection('Narrations'),
+                    titleUpdatedNarrations = []
                 ;
                 for(const value of request.body.narrationIds) {
-                    narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId = await speakAppNarrationCollection.findOne(
+                    narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasToBeChangedNarrationId = await speakAppNarrationCollection.findOne(
                         {
                             _id: new ObjectID(value)
                         }
                     );
 
-                    //console.log("narration object matching to narrationid of narration of which title has changed from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId));
-                    narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId.title = request.body.title;
+                    //console.log("narration object matching to narrationid of narration of which title has changed from client side is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasToBeChangedNarrationId));
+                    narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasToBeChangedNarrationId.title = request.body.title;
 
                     //narration.slideSwitches = narration.slideSwitches || [];
                     //narration.slideSwitches.push(request.body.slideSwitches);
 
-                    speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId);
-                    console.log("narration object after changing title and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId));
-                    response.send(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId);
+                    speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasToBeChangedNarrationId);
+                    console.log("narration object after changing title and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasToBeChangedNarrationId));
+                    titleUpdatedNarrations.push(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasToBeChangedNarrationId);
+                    //response.send(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasToBeChangedNarrationId);
                 }
+                console.log("Title Updated Narrations are " + JSON.stringify(titleUpdatedNarrations));
+                response.send(titleUpdatedNarrations);
+                response.end();
                 db.close();
             }
         )();
@@ -919,6 +925,7 @@ app.post(
                 console.log("narration object after changing title and saving to database is " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId));
                 response.send(narrationObjectWithMatchingNarrationIdToNarrationOfWhichTitleHasChangedNarrationId);
                 db.close();
+                response.end();
             }
         )();
     }
@@ -937,9 +944,9 @@ app.post(
                     db = await MongoClient.connect(usersUrl),
                     speakAppNarrationCollection = db.collection('Narrations'),
                     speakAppUserCollection = db.collection('speakappuser'),
+                    publishedNarrations = [],
+                    narrations = []
                     //narrationIdsArray = new Array(request.body.narrationIds),
-                    narrations = [],
-                    publishedNarrations = []
                 ;
 
                 for (const narrationId of request.body.narrationIds) {
@@ -948,10 +955,13 @@ app.post(
                             _id: new ObjectID(narrationId)
                         }
                     );
+                    console.log("Narration Object with matching narration id to narration id to publish from client before publishing " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient));
                     narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient.published = true;
                     await speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
+                    console.log("Published narrations array before before pushing published narration object is " + JSON.stringify(publishedNarrations));
                     publishedNarrations.push(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
-                    console.log("Published narration objects are " + JSON.stringify(publishedNarrations));
+                    console.log("Published narrations array after pushing published narration object " + JSON.stringify(publishedNarrations));
+                    console.log("Narration object after publishing " + JSON.stringify(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient));
                     console.log("narration object with id "+narrationId);
                 }
                 if(request.body.pageName == "recordNarrationPage"){
@@ -993,6 +1003,7 @@ app.post(
                     response.send(narrations);
                 }
                 db.close();
+                response.end();
             }
         )();
     }
