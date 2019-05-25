@@ -563,6 +563,9 @@ app.post(
                         console.log("error finding narration object with id ");
                     }
                 }
+                response.send("Narrations deleted permanently");
+                response.end();
+                db.close();
             }
         )();
     }
@@ -585,6 +588,7 @@ app.post(
                 ;
                 console.log("ALL PUBLISHED NARRATIONS ARE " + JSON.stringify(allPublishedNarrations));
                 response.send(allPublishedNarrations);
+                response.end();
                 db.close();
             }
         )();
@@ -1021,6 +1025,7 @@ app.post(
                     speakAppNarrationCollection = db.collection('Narrations'),
                     speakAppUserCollection = db.collection('speakappuser'),
                     //narrationIdsArray = new Array(request.body.narrationIds),
+                    unpublishedNarrations = [],
                     narrations = []
                 ;
 
@@ -1032,11 +1037,14 @@ app.post(
                     );
                     narrationObjectWithMatchingNarrationIdToNarrationIdToUnpublishFromClient.published = false;
                     await speakAppNarrationCollection.save(narrationObjectWithMatchingNarrationIdToNarrationIdToUnpublishFromClient);
-                    //publishedNarrationObjects.push(narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient);
+                    unpublishedNarrations.push(narrationObjectWithMatchingNarrationIdToNarrationIdToUnpublishFromClient);
 
 
                     console.log("narration object with id "+narrationId);
 
+                }
+                if(request.body.pageName == "recordNarrationPage"){
+                    response.send(unpublishedNarrations);
                 }
 
                 var userObjectWithMatchingUsernameAndPasswordToLoginRequestUserNameAndPassword = await speakAppUserCollection.findOne(
@@ -1070,8 +1078,11 @@ app.post(
                 }
                 //var narrations = await speakAppNarrationCollection.find({}).toArray;
                 //response.send(publishedNarrationObjects);
-                response.send(narrations);
+                if(request.body.pageName == "userAreaPage"){
+                    response.send(narrations);
+                }
                 db.close();
+                response.end();
             }
         )();
     }
