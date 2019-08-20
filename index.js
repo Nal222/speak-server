@@ -15,10 +15,13 @@ var
     fs = require('fs'),
     wav = require('wav'),
     multer = require('multer'),
-    ObjectID = require('mongodb').ObjectID
+    ObjectID = require('mongodb').ObjectID,
     nodemailer = require('nodemailer')
 ;
 const uuidv4 = require('uuid/v4');
+const jo = require('jpeg-autorotate');
+const sharp = require('sharp');
+
 
 app.use(cors());
 app.use(bodyParser.urlencoded({
@@ -258,7 +261,7 @@ app.post(
                 console.log("USER FROM DOING STOP SORTING IS " + JSON.stringify(user));
                 console.log("Gallery Item Ids after sorting or deleting from request is " + request.body.galleryItemIds + "");
                 speakAppUserCollection.save(user);
-                //TODO: Save gallery items i.e. images to gallerItemsCollection matching the galleryItemIds
+                //TODO: Save gallery items i.e. images to galleryItemsCollection matching the galleryItemIds
                 //response.send(galleryItemIds);
                 response.send(user.galleryItemIds);
                 db.close();
@@ -370,18 +373,42 @@ app.post(
     '/uploadImages',
     upload.single('file'),
     function (req, res, next) {
+        //console.log("Request object is " + JSON.stringify(req));
         console.log(req.file);
         console.log(req.file.path);
         console.log("Name of file on user's computer is " + req.file.originalname);
+        const path = req.file.path;
+        const options = {quality: 85};
         (
             async ()=> {
+                var imageFilePath = "./public/Images/" + uuidv4() + ".jpg";
+                jo.rotate(path, options)
+                    .then(({buffer, orientation, dimensions, quality}) => {
+                        sharp(buffer).toFile(
+                            imageFilePath,
+                            (err, info) =>
+                            {
+
+                            }
+                        );
+                    })
+                    .catch((error) => {
+                        if(error.code === jo.errors.correct_orientation){
+                            console.log("The orientation of this image is already correct!");
+                        }
+                    });
+
+
+
                 var
                     db = await MongoClient.connect(usersUrl),
                     collection = db.collection('GalleryItems')
                 ;
+                var filename = imageFilePath.replace(/^.*[\\\/]/, '');
+                console.log("Rotated image file name is " + filename);
                 var result = await collection.insertOne(
                     {
-                        url: "http://localhost:3700/Images/" + req.file.filename
+                        url: "http://localhost:3700/Images/" + filename
                     }
                 );
                 console.log("objectid of gallery item  object is string " + result.insertedId);
@@ -396,12 +423,14 @@ app.post(
                 user.galleryItemIds = user.galleryItemIds || [];
                 user.galleryItemIds.push(result.insertedId);
                 speakAppUserCollection.save(user);
-                console.log("FILENAME IS " + req.file.filename);
-                user.fileName = req.file.filename;
+                console.log("FILENAME PATH IS " + imageFilePath);
+                user.fileName = filename;
                 user.imageId = result.insertedId;
+                //user.orientation = req.orientation;
                 res.send(user);
                 //res.send({galleryItemId: result.insertedId});
                 db.close();
+                res.end();
 
 
             }
@@ -606,12 +635,14 @@ app.post(
                     db = await MongoClient.connect(usersUrl),
                     speakAppNarrationCollection = db.collection("Narrations")
                 ;
-                db.ensureIndex(
-                    "Narrations",
+                speakAppNarrationCollection.createIndex(
                     {
                         title: "text"
                     },
-                    function(err, indexname)
+                    {
+                        "textIndexVersion": 3
+                    },
+                    function(err, result)
                     {
 
                     }
@@ -619,9 +650,9 @@ app.post(
                 console.log("Search input is " + request.body.searchInput);
                 var narrationsSearched = speakAppNarrationCollection.find
                 (
-                    { "$text":
+                    { $text:
                         {
-                            "$search": request.body.searchInput
+                            $search: request.body.searchInput
                         }
                     }
                     /*
@@ -953,7 +984,7 @@ app.post(
                     //narrationIdsArray = new Array(request.body.narrationIds),
                 ;
 
-                for (const narrationId of request.body.narrationIds) {
+                for (var narrationId of request.body.narrationIds) {
                     const narrationObjectWithMatchingNarrationIdToNarrationIdToPublishFromClient = await speakAppNarrationCollection.findOne(
                         {
                             _id: new ObjectID(narrationId)
