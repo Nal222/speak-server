@@ -16,7 +16,8 @@ var
     wav = require('wav'),
     multer = require('multer'),
     ObjectID = require('mongodb').ObjectID,
-    nodemailer = require('nodemailer')
+    nodemailer = require('nodemailer'),
+    Jimp = require('jimp')
 ;
 const uuidv4 = require('uuid/v4');
 const jo = require('jpeg-autorotate');
@@ -377,11 +378,12 @@ app.post(
         console.log(req.file);
         console.log(req.file.path);
         console.log("Name of file on user's computer is " + req.file.originalname);
-        const path = req.file.path;
-        const options = {quality: 85};
+        //const path = req.file.path;
+        //const options = {quality: 85};
         (
             async ()=> {
-                var imageFilePath = "./public/Images/" + uuidv4() + ".jpg";
+                //var imageFilePath = "./public/Images/" + uuidv4() + ".jpg";
+                /*
                 jo.rotate(path, options)
                     .then(({buffer, orientation, dimensions, quality}) => {
                         sharp(buffer).toFile(
@@ -397,6 +399,7 @@ app.post(
                             console.log("The orientation of this image is already correct!");
                         }
                     });
+                    */
 
 
 
@@ -404,11 +407,11 @@ app.post(
                     db = await MongoClient.connect(usersUrl),
                     collection = db.collection('GalleryItems')
                 ;
-                var filename = imageFilePath.replace(/^.*[\\\/]/, '');
-                console.log("Rotated image file name is " + filename);
+                //var filename = imageFilePath.replace(/^.*[\\\/]/, '');
+                //console.log("Rotated image file name is " + filename);
                 var result = await collection.insertOne(
                     {
-                        url: "http://localhost:3700/Images/" + filename
+                        url: "http://localhost:3700/Images/" + req.file.filename
                     }
                 );
                 console.log("objectid of gallery item  object is string " + result.insertedId);
@@ -423,8 +426,8 @@ app.post(
                 user.galleryItemIds = user.galleryItemIds || [];
                 user.galleryItemIds.push(result.insertedId);
                 speakAppUserCollection.save(user);
-                console.log("FILENAME PATH IS " + imageFilePath);
-                user.fileName = filename;
+                //console.log("FILENAME PATH IS " + imageFilePath);
+                user.fileName = req.file.filename;
                 user.imageId = result.insertedId;
                 //user.orientation = req.orientation;
                 res.send(user);
@@ -436,6 +439,78 @@ app.post(
             }
         )();
 });
+
+app.post(
+    '/saveRotatedImages',
+    function(request, response){
+        (
+            async ()=> {
+
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    collection = db.collection('GalleryItems'),
+                    rotatedImageObjects = []
+                ;
+                for (const value of request.body.urls) {
+                    var imageFileBeforeRotation = value.replace(/^.*[\\\/]/, '');
+                    console.log("Filename is " + imageFileBeforeRotation);
+                    var imageFileExtension = imageFileBeforeRotation.split('.').pop();
+                    console.log("Image File extension is " + imageFileExtension);
+                    var imageFileAfterRotation = (uuidv4() + '.' + imageFileExtension);
+                    var numericAngle = Number(request.body.degrees);
+                    //var imageFileLength = imageFile.length;
+                    //var slicedUrl = value.slice(0, -imageFileLength);
+                    var rotatedOutputPath = "./public/Images/" + imageFileAfterRotation;
+                    if(value.includes("http://localhost:3700/Images/")) {
+                        sharp("./public/Images/" + imageFileBeforeRotation)
+                            .rotate(numericAngle)
+                            .toFile(rotatedOutputPath)
+                        ;
+                    }
+                    else{
+                        Jimp.read(value)
+                            .then(image => {
+                                sharp(image)
+                                    .rotate(numericAngle)
+                                    .toFile(rotatedOutputPath)
+                            })
+                        ;
+                    }
+                    console.log("IMAGE FILE AFTER ROTATION " + imageFileAfterRotation);
+
+                    await collection.findOneAndUpdate({url: value}, {$set: {url: "http://localhost:3700/Images/" + imageFileAfterRotation}}, {returnOriginal: false});
+                    var rotatedImageObject = await collection.findOne(
+                        {
+                            url: "http://localhost:3700/Images/" + imageFileAfterRotation
+                        }
+                    );
+                    //var rotatedImageObject = collection.findOne({url: "http://localhost:3700/Images/" + imageFileAfterRotation});
+                    console.log("Rotated Image Object is " + JSON.stringify(rotatedImageObject));
+                    rotatedImageObjects.push(rotatedImageObject);
+
+
+                    /*
+                    else{
+                        var imageFileLength =  imageFile.length;
+                        var result = value.slice(0, -imageFileLength);
+                        console.log("Image url with file name sliced out is " + result);
+                        collection.updateOne({url: value}, {$set: {url: result + imageFileAfterRotation}});
+                        var rotatedImageObject = collection.findOne({url: result + imageFileAfterRotation});
+                        console.log("Rotated Image Object is " + JSON.stringify(rotatedImageObject));
+                        rotatedImageObjects.push(rotatedImageObject);
+                    }
+                    */
+
+                }
+                console.log("Rotated image objects array is " + JSON.stringify(rotatedImageObjects));
+                response.send(rotatedImageObjects);
+                response.end();
+                db.close();
+            }
+        )();
+
+    }
+);
 /*
 app.post(
     '/uploadImages',
