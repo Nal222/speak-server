@@ -470,9 +470,15 @@ app.post(
                     else{
                         Jimp.read(value)
                             .then(image => {
-                                sharp(image)
-                                    .rotate(numericAngle)
-                                    .toFile(rotatedOutputPath)
+                                if(numericAngle/180==0 || numericAngle/360==0) {
+                                    image
+                                        .rotate(numericAngle)
+                                        .write(rotatedOutputPath);
+                                }
+                                else {
+                                    image.rotate(numericAngle + 180)
+                                        .write(rotatedOutputPath);
+                                }
                             })
                         ;
                     }
@@ -723,7 +729,7 @@ app.post(
                     }
                 );
                 console.log("Search input is " + request.body.searchInput);
-                var narrationsSearched = speakAppNarrationCollection.find
+                var narrationsSearched = await speakAppNarrationCollection.find
                 (
                     { $text:
                         {
