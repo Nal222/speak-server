@@ -1211,19 +1211,31 @@ app.post(
                 db = await MongoClient.connect(usersUrl),
                 speakAppCommentsCollection = db.collection('Comments'),
                 timeInMs = Date.now(),
-                commentObject =
+                saveCommentResult =
                     await
                         speakAppCommentsCollection.insertOne(
                             {
                                 commentText: request.body.comment,
+                                username: request.body.username,
                                 narrationId: request.body.narrationId,
                                 userID: request.body.userID,
                                 commentTimeInUnixTimestamp: timeInMs
                             }
                         )
                 ;
-                console.log("Saved comment object in comments collection is " + JSON.stringify(commentObject));
+                console.log("Saved comment object result in comments collection is " + JSON.stringify(saveCommentResult));
+                console.log("Inserted id in saved comment object is " + saveCommentResult.insertedId);
+                var commentObject =
+                    await
+                        speakAppCommentsCollection.findOne(
+                            {
+                                _id: saveCommentResult.insertedId
+                            }
+                        )
+                ;
+                console.log("Saved comment object is " + JSON.stringify(commentObject));
                 response.send(commentObject);
+                response.end();
                 db.close();
             }
         )();
