@@ -484,7 +484,20 @@ app.post(
                     }
                     console.log("IMAGE FILE AFTER ROTATION " + imageFileAfterRotation);
 
-                    await collection.findOneAndUpdate({url: value}, {$set: {url: "http://localhost:3700/Images/" + imageFileAfterRotation}}, {returnOriginal: false});
+                    await collection.findOneAndUpdate(
+                        {
+                            url: value
+                        },
+                        {
+                            $set:
+                                {
+                                    url: "http://localhost:3700/Images/" + imageFileAfterRotation
+                                }
+                        },
+                        {
+                            returnOriginal: false
+                        }
+                    );
                     var rotatedImageObject = await collection.findOne(
                         {
                             url: "http://localhost:3700/Images/" + imageFileAfterRotation
@@ -1234,6 +1247,53 @@ app.post(
                         )
                 ;
                 console.log("Saved comment object is " + JSON.stringify(commentObject));
+                response.send(commentObject);
+                response.end();
+                db.close();
+            }
+        )();
+    }
+);
+app.post(
+    '/updateComment',
+    function (request, response) {
+        console.log("REQUEST BODY IS " + JSON.stringify(request.body));
+        console.log("REQUEST PATH IS " + request.path);
+        //response.json({name: "Nalini Chawla"});
+        (
+            async () => {
+                var
+                    db = await MongoClient.connect(usersUrl),
+                    speakAppCommentsCollection = db.collection('Comments'),
+                    timeInMs = Date.now(),
+                    updateCommentResult =
+                        await
+                            speakAppCommentsCollection.findOneAndUpdate(
+                                {
+                                    _id: new ObjectID(request.body.editedCommentId)
+                                },
+                                {
+                                    $set:
+                                        {
+                                            commentText: request.body.editedCommentText,
+                                            commentTimeInUnixTimestamp: timeInMs
+                                        }
+                                },
+                                {
+                                    returnNewDocument: true
+                                }
+                            )
+                ;
+                console.log("Updated comment object result in comments collection is " + JSON.stringify(updateCommentResult));
+                var commentObject =
+                    await
+                        speakAppCommentsCollection.findOne(
+                            {
+                                _id: new ObjectID(request.body.editedCommentId)
+                            }
+                        )
+                ;
+                console.log("Updated comment object is " + JSON.stringify(commentObject));
                 response.send(commentObject);
                 response.end();
                 db.close();
